@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &7586289421317910758
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6681187384812444713}
+  - component: {fileID: 8885782632649181621}
+  m_Layer: 0
+  m_Name: DigDeepGame
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6681187384812444713
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7586289421317910758}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8885782632649181621
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7586289421317910758}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b6658399c22bcd04d89c212331d403c3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DigDeep.GameManager
+  settings: {fileID: 11400000, guid: c664371bc865e6d43b1b5a489ccaaac3, type: 2}
+  stone: {fileID: -989012747, guid: cc5c5f08b3ee5bd45aa5549d01a40e1c, type: 3}
+  grass: {fileID: 1620990502, guid: cc5c5f08b3ee5bd45aa5549d01a40e1c, type: 3}
+  wood: {fileID: -1500861065, guid: cc5c5f08b3ee5bd45aa5549d01a40e1c, type: 3}
+  iron: {fileID: -1721074742, guid: cc5c5f08b3ee5bd45aa5549d01a40e1c, type: 3}
+  font: {fileID: 12800000, guid: 995492bfe62ca8149a3bc1e6ea771ebe, type: 3}
