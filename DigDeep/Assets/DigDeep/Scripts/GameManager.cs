@@ -2,6 +2,7 @@ using UnityEngine;
 
 namespace DigDeep
 {
+    public enum GameModal { None, Shop, Upgrade, ResetWarning, ResetConfirm }
     public sealed class GameManager : MonoBehaviour
     {
         public GameSettings settings;
@@ -10,6 +11,9 @@ namespace DigDeep
         public MiningSession Session { get; private set; }
         public GameView View { get; private set; }
         public PointerController Controls { get; private set; }
+        public GameModal Modal { get; private set; }
+        public string SaveWarning => store.Warning;
+        readonly ProgressStore store = new ProgressStore();
         public bool IsSwinging { get; private set; }
         public float SwingProgress => IsSwinging ? Mathf.Clamp01((Time.unscaledTime - swingStarted) / settings.strikeInterval) : 0;
         bool continuous, dropMining, impactDone;
@@ -18,7 +22,7 @@ namespace DigDeep
         void Awake()
         {
             if (settings == null) settings = ScriptableObject.CreateInstance<GameSettings>();
-            Session = new MiningSession(settings, PlayerPrefs.GetInt(GameSettings.MoneyKey, 0));
+            Session = new MiningSession(settings, store.Load(settings));
             Session.MoneyChanged += SaveMoney;
             View = gameObject.AddComponent<GameView>();
             View.Initialize(this);
@@ -28,7 +32,7 @@ namespace DigDeep
 
         void Update()
         {
-            if (!IsSwinging) return;
+            if (!IsSwinging || Modal != GameModal.None) return;
             float progress = SwingProgress;
             if (!impactDone && progress >= 0.52f)
             {
@@ -44,22 +48,57 @@ namespace DigDeep
             }
         }
 
-        public void Tap() { if (Session.CanMine && !IsSwinging) BeginSwing(); }
-        public void Hold() { if (!Session.CanMine) return; continuous = true; if (!IsSwinging) BeginSwing(); }
+        public void Tap() { if (Modal == GameModal.None && Session.CanMine && !IsSwinging) BeginSwing(); }
+        public void Hold() { if (Modal != GameModal.None || !Session.CanMine) return; continuous = true; if (!IsSwinging) BeginSwing(); }
         void BeginSwing() { IsSwinging = true; impactDone = false; swingStarted = Time.unscaledTime; }
         public void StopMining() { continuous = false; dropMining = false; IsSwinging = false; }
         public void Drop(Vector2Int cell)
         {
             StopMining();
-            if (Session.Drop(cell) && Session.Target.HasValue)
+            if (Modal == GameModal.None && Session.Drop(cell) && Session.Target.HasValue)
             { dropMining = true; continuous = true; BeginSwing(); }
         }
-        public void SelectPick(int index) { StopMining(); Session.Select(index); }
-        public void Play() { StopMining(); Session.Start(); }
-        public void Restart() { StopMining(); Session.Restart(); }
-        void SaveMoney(int amount) { PlayerPrefs.SetInt(GameSettings.MoneyKey, amount); PlayerPrefs.Save(); }
-        void OnApplicationPause(bool paused) { if (paused) CancelInput(); }
-        void OnApplicationFocus(bool focused) { if (!focused) CancelInput(); }
+        public void SelectPick(int index) { if (Modal != GameModal.None) return; StopMining(); Session.Select(index); }
+        public void Play() { if (Modal != GameModal.None) return; StopMining(); Session.Start(); }
+        public void Restart() { CancelInput(); Session.Restart(); SaveGrowth(); }
+        public void Regroup()
+        {
+            if (Modal != GameModal.None || Session.State != SessionState.Playing) return;
+            CancelInput(); Session.Regroup(); SaveGrowth();
+        }
+        public void HandleAction(string action)
+        {
+            if (action == "close") { CancelInput(); Modal = GameModal.None; return; }
+            if (action == "reset-next" && Modal == GameModal.ResetWarning && Session.State != SessionState.Playing)
+            { CancelInput(); Modal = GameModal.ResetConfirm; return; }
+            if (action == "reset-confirm" && Modal == GameModal.ResetConfirm && Session.State != SessionState.Playing)
+            {
+                CancelInput();
+                var initial = ProgressData.Initial(settings);
+                if (!store.Reset(initial)) return;
+                Session.MoneyChanged -= SaveMoney; Session.Impact -= View.OnImpact;
+                Session = new MiningSession(settings, initial);
+                Session.MoneyChanged += SaveMoney; Session.Impact += View.OnImpact;
+                Modal = GameModal.None; return;
+            }
+            if (Modal != GameModal.None) return;
+            if (action == "play") Play();
+            else if (action == "restart") Restart();
+            else if (action == "regroup") Regroup();
+            else if (action.StartsWith("pick") && int.TryParse(action.Substring(4), out int index)) SelectPick(index);
+            else if (Session.State != SessionState.Playing)
+            {
+                if (action == "shop") Open(GameModal.Shop);
+                else if (action == "upgrade") Open(GameModal.Upgrade);
+                else if (action == "reset") Open(GameModal.ResetWarning);
+            }
+        }
+        void Open(GameModal modal) { CancelInput(); Modal = modal; }
+        void SaveMoney(int amount) => SaveGrowth();
+        public void SaveGrowth() { if (Session != null) store.Save(Session.Growth()); }
+        void OnApplicationPause(bool paused) { if (paused) { CancelInput(); SaveGrowth(); } }
+        void OnApplicationFocus(bool focused) { if (!focused) { CancelInput(); SaveGrowth(); } }
+        void OnApplicationQuit() => SaveGrowth();
         void CancelInput() { StopMining(); if (Controls != null) Controls.Cancel(); }
     }
 }

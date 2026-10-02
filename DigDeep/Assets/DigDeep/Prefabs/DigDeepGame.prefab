@@ -47,6 +47,6 @@ MonoBehaviour:
   settings: {fileID: 11400000, guid: c664371bc865e6d43b1b5a489ccaaac3, type: 2}
   stone: {fileID: -989012747, guid: cc5c5f08b3ee5bd45aa5549d01a40e1c, type: 3}
   grass: {fileID: 1620990502, guid: cc5c5f08b3ee5bd45aa5549d01a40e1c, type: 3}
-  wood: {fileID: -1500861065, guid: cc5c5f08b3ee5bd45aa5549d01a40e1c, type: 3}
-  iron: {fileID: -1721074742, guid: cc5c5f08b3ee5bd45aa5549d01a40e1c, type: 3}
+  wood: {fileID: -276711901, guid: a06272289644bab4282c8fef189d7ba3, type: 3}
+  iron: {fileID: 318530368, guid: a06272289644bab4282c8fef189d7ba3, type: 3}
   font: {fileID: 12800000, guid: 995492bfe62ca8149a3bc1e6ea771ebe, type: 3}

@@ -10,9 +10,10 @@ namespace DigDeep
     {
         public readonly string Name;
         public readonly int Power, Maximum;
+        public readonly int Upgrade;
         public int Remaining;
-        public Pickaxe(string name, int power, int maximum)
-        { Name = name; Power = Math.Max(1, power); Maximum = Math.Max(1, maximum); Remaining = Maximum; }
+        public Pickaxe(string name, int power, int maximum, int upgrade = 0)
+        { Name = name; Power = Math.Max(1, power); Maximum = Math.Max(1, maximum); Upgrade = Math.Max(0, upgrade); Remaining = Maximum; }
     }
 
     // Rules are independent of animation, touch devices, and scene objects.
@@ -34,13 +35,21 @@ namespace DigDeep
         readonly int reward;
         readonly Dictionary<Vector2Int, int> health = new Dictionary<Vector2Int, int>();
 
-        public MiningSession(GameSettings settings, int savedMoney)
+        public MiningSession(GameSettings settings, int savedMoney) : this(settings, ProgressData.Initial(settings, savedMoney)) { }
+
+        public MiningSession(GameSettings settings, ProgressData progress)
         {
             HealthMaximum = Math.Max(1, settings.blockHealth);
             reward = Math.Max(0, settings.blockReward);
-            Money = Math.Max(0, savedMoney);
-            Picks = new[] { new Pickaxe("WOOD", settings.woodPower, settings.woodDurability),
-                new Pickaxe("IRON", settings.ironPower, settings.ironDurability) };
+            Money = Math.Max(0, progress.money);
+            Picks = progress.picks.ConvertAll(p => new Pickaxe(p.id, p.power, p.maximum, p.upgrade)).ToArray();
+        }
+
+        public ProgressData Growth()
+        {
+            var data = new ProgressData { money = Money };
+            foreach (var p in Picks) data.picks.Add(new PickProgress { id = p.Name, power = p.Power, maximum = p.Maximum, upgrade = p.Upgrade });
+            return data;
         }
 
         public int Health(Vector2Int cell)
@@ -59,6 +68,17 @@ namespace DigDeep
         public void Restart()
         {
             if (State != SessionState.GameOver) return;
+            PrepareNewRun();
+        }
+
+        public void Regroup()
+        {
+            if (State != SessionState.Playing) return;
+            PrepareNewRun();
+        }
+
+        void PrepareNewRun()
+        {
             health.Clear();
             foreach (var pick in Picks) pick.Remaining = pick.Maximum;
             Position = new Vector2Int(2, -1);

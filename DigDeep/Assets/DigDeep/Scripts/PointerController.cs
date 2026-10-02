@@ -79,13 +79,11 @@ namespace DigDeep
             {
                 if (action != null && game.View.ActionAt(last) == action)
                 {
-                    if (action == "play") game.Play();
-                    else if (action == "restart") game.Restart();
-                    else if (action.StartsWith("pick")) game.SelectPick(int.Parse(action.Substring(4)));
+                    game.HandleAction(action);
                 }
                 else if (dragging)
                 { if (game.View.InField(last)) game.Drop(game.View.CellAt(last)); }
-                else if (!pickCandidate && !held) game.Tap();
+                else if (action == null && !pickCandidate && !held) game.Tap();
             }
             if (held) game.StopMining();
             game.View.EndDrag(); active = false; action = null;
