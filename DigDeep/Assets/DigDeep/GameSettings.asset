@@ -12,12 +12,52 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0bfdfac7fa8422346bcdd8ca740f2600, type: 3}
   m_Name: GameSettings
   m_EditorClassIdentifier: Assembly-CSharp::DigDeep.GameSettings
-  blockHealth: 12
-  blockReward: 2
-  woodPower: 4
-  woodDurability: 120
-  ironPower: 6
-  ironDurability: 180
+  blockHealth: 1
+  blockReward: 1
+  coalHealth: 5
+  ironOreHealth: 15
+  goldOreHealth: 15
+  goldSellPrice: 40
+  spawnLines:
+  - name: "1\uB77C\uC778"
+    firstRow: 2
+    lastRow: 10
+    coalPercent: 5
+    ironPercent: 0
+    goldPercent: 0
+    guaranteeOne: 1
+  - name: "2\uB77C\uC778"
+    firstRow: 11
+    lastRow: 25
+    coalPercent: 5
+    ironPercent: 5
+    goldPercent: 0
+    guaranteeOne: 1
+  - name: "3\uB77C\uC778"
+    firstRow: 26
+    lastRow: 45
+    coalPercent: 1
+    ironPercent: 7
+    goldPercent: 0.8
+    guaranteeOne: 1
+  woodPower: 1
+  stonePower: 1
+  ironPower: 2
+  alloyPower: 2.5
+  woodDurability: 20
+  stoneDurability: 30
+  ironDurability: 50
+  alloyDurability: 80
+  purchasePrices: 64000000e803000010270000
+  stoneUpgradeCost: 50
+  ironUpgradeCost: 200
+  ironUpgradeOre: 7
+  stoneUpgradeCoal: 3
+  ironUpgradeCoal: 14
+  alloyUpgradeCost: 500
+  alloyUpgradeCoal: 30
+  alloyUpgradeIron: 10
+  alloyUpgradeGold: 5
   holdDelay: 0.28
   strikeInterval: 0.34
   dragThreshold: 10

@@ -11,6 +11,7 @@ namespace DigDeep
         GameManager game;
         TouchControl touch;
         bool active, pickCandidate, dragging, held, canceled;
+        bool menuScrollCandidate, menuScrolling;
         string action;
         Vector2 origin, last;
         float started;
@@ -37,6 +38,7 @@ namespace DigDeep
             var mouse = Mouse.current;
             if (mouse == null) return;
             var position = mouse.position.ReadValue();
+            if (!active) game.View.MenuWheel(game.View.Local(position), mouse.scroll.ReadValue().y * .35f);
             if (mouse.leftButton.wasPressedThisFrame) Down(position);
             else if (active && mouse.leftButton.isPressed) Move(position);
             if (active && mouse.leftButton.wasReleasedThisFrame) Up(position);
@@ -47,18 +49,32 @@ namespace DigDeep
             if (active) return;
             active = true; started = Time.unscaledTime; origin = last = game.View.Local(screen);
             held = dragging = canceled = false;
+            menuScrolling = false;
+            menuScrollCandidate = game.View.BeginMenuScroll(origin);
             action = game.View.ActionAt(origin);
             pickCandidate = action == null && game.Session.CanMine && game.View.PickContains(origin);
+            if (action == null && !game.Tutorial.AllowsFieldStart(pickCandidate)) { action = "blocked"; pickCandidate = false; }
             if (pickCandidate) game.StopMining();
             if (action == null && (!game.View.InField(origin) || !game.Session.CanMine)) canceled = true;
         }
 
         public void Move(Vector2 screen)
         {
-            if (!active || canceled) return;
+            if (!active) return;
             last = game.View.Local(screen);
+            if (menuScrolling) { game.View.DragMenuScroll(last.y - origin.y); return; }
+            if (canceled) return;
             float distance = Vector2.Distance(last, origin);
-            if (action != null) { if (distance > game.settings.dragThreshold) canceled = true; return; }
+            if (action != null)
+            {
+                if (distance > game.settings.dragThreshold)
+                {
+                    if (menuScrollCandidate && Mathf.Abs(last.y - origin.y) > Mathf.Abs(last.x - origin.x))
+                    { menuScrolling = true; game.View.DragMenuScroll(last.y - origin.y); }
+                    else canceled = true;
+                }
+                return;
+            }
             if (pickCandidate)
             {
                 if (distance >= game.settings.dragThreshold) dragging = true;
@@ -75,21 +91,21 @@ namespace DigDeep
         {
             if (!active) return;
             last = game.View.Local(screen);
-            if (!canceled)
+            if (!canceled && !menuScrolling)
             {
                 if (action != null && game.View.ActionAt(last) == action)
                 {
                     game.HandleAction(action);
                 }
                 else if (dragging)
-                { if (game.View.InField(last)) game.Drop(game.View.CellAt(last)); }
+                { if (game.View.InField(last)) game.Drop(game.View.CellAt(last)); else game.DropOutsideField(); }
                 else if (action == null && !pickCandidate && !held) game.Tap();
             }
-            if (held) game.StopMining();
+            if (held) { if (!canceled) game.ReleaseHold(); else game.StopMining(); }
             game.View.EndDrag(); active = false; action = null;
         }
 
         public void Cancel()
-        { active = false; touch = null; action = null; dragging = held = false; game.StopMining(); game.View.EndDrag(); }
+        { active = false; touch = null; action = null; dragging = held = menuScrolling = menuScrollCandidate = false; game.StopMining(); game.View.EndDrag(); }
     }
 }

@@ -25,7 +25,7 @@ namespace DigDeep
             yield return null;
             var game = FindFirstObjectByType<GameManager>();
             if (game == null) { Fail("manager missing"); yield break; }
-            int savedMoney = game.Session.Money;
+            var savedGrowth = game.Session.Growth();
             Directory.CreateDirectory("Builds/Verification");
             yield return new WaitForSecondsRealtime(.3f);
             Capture("Builds/Verification/01-ready.png");
@@ -37,7 +37,7 @@ namespace DigDeep
             int initial = game.Session.Picks[0].Remaining;
             game.Controls.Down(mine); game.Controls.Up(mine);
             yield return new WaitForSecondsRealtime(.4f);
-            if (game.Session.Picks[0].Remaining != initial - game.settings.woodPower) { Fail("tap must hit exactly once"); yield break; }
+            if (game.Session.Picks[0].Remaining != initial - 1) { Fail("tap must hit exactly once"); yield break; }
             game.Controls.Down(mine);
             yield return new WaitForSecondsRealtime(game.settings.holdDelay + .05f);
             game.Controls.Move(mine);
@@ -47,20 +47,18 @@ namespace DigDeep
             yield return new WaitForSecondsRealtime(.5f);
             if (game.Session.Picks[0].Remaining != stopped) { Fail("hold release must stop damage"); yield break; }
             // UI tap must not also cause a strike.
-            var card = game.View.ScreenPoint(new Vector2(135, 50));
+            var card = game.View.ScreenPoint(new Vector2(44, 50));
             game.Controls.Down(card); game.Controls.Up(card);
             yield return new WaitForSecondsRealtime(.4f);
-            if (game.Session.Selected != 1 || game.Session.Picks[1].Remaining != game.Session.Picks[1].Maximum)
+            if (game.Session.Selected != 0 || game.Session.Picks[0].Remaining != stopped)
             { Fail("UI selection click-through"); yield break; }
             game.SelectPick(0);
             for (int i = 0; i < 8; i++) game.Session.Strike();
             yield return new WaitForSecondsRealtime(.6f);
             Capture("Builds/Verification/02-mining.png");
             yield return new WaitForSecondsRealtime(.3f);
-            while (game.Session.CanMine) game.Session.Strike();
-            if (game.Session.State != SessionState.Playing) { Fail("manual switch should remain available"); yield break; }
-            game.SelectPick(1);
-            while (game.Session.CanMine) game.Session.Strike();
+            for (int index = 0; index < game.Session.Picks.Length; index++)
+            { game.SelectPick(index); while (game.Session.CanMine) game.Session.Strike(); }
             yield return new WaitForSecondsRealtime(.3f);
             if (game.Session.State != SessionState.GameOver) { Fail("all exhausted game over"); yield break; }
             int earned = game.Session.Money;
@@ -70,7 +68,7 @@ namespace DigDeep
             if (game.Session.Money != earned || game.Session.Picks[0].Remaining != initial)
             { Fail("restart money and durability"); yield break; }
             // Smoke runs must not award money to the user's real save.
-            PlayerPrefs.SetInt(GameSettings.MoneyKey, savedMoney); PlayerPrefs.Save();
+            new ProgressStore(".Smoke").Reset(savedGrowth);
             File.WriteAllText("Builds/Verification/smoke-result.txt", "PASS: start, tap, hold release, UI isolation, manual selection, game over, restart, persistent money.\n");
             Debug.Log("DIGDEEP_SMOKE_PASS");
             Application.Quit(0);

@@ -82,6 +82,9 @@ namespace DigDeep.Editor
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Disabled;
             PlayerSettings.WebGL.template = "PROJECT:DigDeep";
             AssetDatabase.SaveAssets();
+            MiningContentSetup.ImportArt();
+            MiningContentSetup.ConnectArt();
+            AssetDatabase.SaveAssets();
             RuleChecks.Run();
             Debug.Log("DIGDEEP_SETUP_SUCCESS");
         }

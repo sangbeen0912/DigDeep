@@ -6,18 +6,25 @@ namespace DigDeep
 {
     public sealed class GameView : MonoBehaviour
     {
-        const float Width = 480, Height = 854, Pitch = 88, Left = 20, FieldTop = 148, Surface = 266;
+        const float Width = 480, Height = 854, Pitch = 88, Left = 20, FieldTop = 180, Surface = 298;
+        public const float IdlePickAngle = -35;
         GameManager game;
         RectTransform root, field, world, pickRect, marker, overlay;
-        Image pickImage, markerImage, readyButton, regroupButton, shopButton, upgradeButton, resetButton;
-        RectTransform modal;
-        Text modalTitle, modalBody, modalConfirm, modalCancel;
-        Image confirmButton;
+        Image pickImage, markerImage, readyButton, regroupButton, shopButton, inventoryButton, upgradeButton, resetButton;
+        GameMenus menus;
+        TutorialView tutorialView;
+        Text notice;
+        Image noticePanel, impactFlash;
+        float noticeUntil;
+        Color noticeColor;
+        sealed class Reward { public Text Text; public Vector2 Start; public float Born = -10; }
+        readonly Reward[] rewards = new Reward[6];
+        int nextReward;
         Text readyHint;
         Text money, status, depth, title, detail, mainLabel;
-        Image[] cards = new Image[2], bars = new Image[2];
-        Image[] icons = new Image[2];
-        Text[] durability = new Text[2];
+        Image[] cards = new Image[4], bars = new Image[4];
+        Image[] icons = new Image[4];
+        Text[] durability = new Text[4];
         readonly List<Tile> tiles = new List<Tile>();
         readonly List<Chip> chips = new List<Chip>();
         readonly List<Image> routeMarkers = new List<Image>();
@@ -29,7 +36,7 @@ namespace DigDeep
         Vector2Int impactCell;
         Color dark = new Color32(19, 27, 34, 255), gold = new Color32(239, 189, 88, 255);
         sealed class Tile { public RectTransform Rect; public Image Image; public Image[] Cracks; public Image Health; }
-        sealed class Chip { public RectTransform Rect; public Image Image; public Vector2 Velocity, Start; public float Born; }
+        sealed class Chip { public RectTransform Rect; public Image Image; public Vector2 Velocity, Start; public Color Tint; public float Born; }
 
         public void Initialize(GameManager owner)
         {
@@ -78,27 +85,36 @@ namespace DigDeep
                 var image = Box(world, "Stone particle", new Rect(0, 0, 5 + i % 4, 5 + i % 4), new Color32(157, 153, 141, 255));
                 image.gameObject.SetActive(false); chips.Add(new Chip { Rect = image.rectTransform, Image = image, Born = -10 });
             }
-            Box(root, "HUD", new Rect(0, 0, Width, FieldTop), dark);
-            Box(root, "HUD underline", new Rect(20, 146, 440, 2), new Color32(49, 65, 72, 255));
-            for (int i = 0; i < 2; i++)
+            impactFlash = Box(world, "Impact flash", new Rect(0, 0, 86, 86), Color.white); impactFlash.gameObject.SetActive(false);
+            for (int i = 0; i < rewards.Length; i++)
             {
-                Rect rect = new Rect(20 + i * 83, 15, 75, 77);
+                var text = Label(world, "Ore reward " + i, new Rect(0, 0, 150, 35), "", 20, Color.white, TextAnchor.MiddleCenter);
+                var outline = text.gameObject.AddComponent<Outline>(); outline.effectColor = new Color32(236, 241, 233, 245); outline.effectDistance = new Vector2(1, -1);
+                text.gameObject.SetActive(false); rewards[i] = new Reward { Text = text };
+            }
+            Box(root, "HUD", new Rect(0, 0, Width, FieldTop), dark);
+            Box(root, "HUD underline", new Rect(20, 178, 440, 2), new Color32(49, 65, 72, 255));
+            for (int i = 0; i < 4; i++)
+            {
+                Rect rect = new Rect(20 + i * 54, 15, 49, 77);
                 cards[i] = Box(root, "Pickaxe slot " + i, rect, dark);
-                Box(cards[i].transform, "Slot inset", new Rect(3, 3, 69, 71), new Color32(35, 45, 52, 255));
-                icons[i] = Box(cards[i].transform, "Pickaxe", new Rect(17, 4, 40, 40), Color.white, i == 0 ? game.wood : game.iron);
-                Box(cards[i].transform, "Durability track", new Rect(8, 46, 59, 5), new Color32(8, 16, 21, 255));
-                bars[i] = Box(cards[i].transform, "Durability fill", new Rect(8, 46, 59, 5), new Color32(125, 210, 171, 255));
-                durability[i] = Label(cards[i].transform, "Durability", new Rect(0, 55, 75, 15), "", 10, Color.white, TextAnchor.MiddleCenter);
+                Box(cards[i].transform, "Slot inset", new Rect(3, 3, 43, 71), new Color32(35, 45, 52, 255));
+                icons[i] = Box(cards[i].transform, "Pickaxe", new Rect(5, 5, 39, 39), Color.white, i == 0 ? game.wood : game.iron);
+                TiltPickIcon(icons[i]);
+                Box(cards[i].transform, "Durability track", new Rect(5, 46, 39, 5), new Color32(8, 16, 21, 255));
+                bars[i] = Box(cards[i].transform, "Durability fill", new Rect(5, 46, 39, 5), new Color32(125, 210, 171, 255));
+                durability[i] = Label(cards[i].transform, "Durability", new Rect(0, 55, 49, 15), "", 10, Color.white, TextAnchor.MiddleCenter);
                 actions["pick" + i] = rect;
             }
-            Label(root, "Wallet caption", new Rect(295, 22, 160, 17), "보유 골드", 12, new Color32(151, 167, 175, 255), TextAnchor.MiddleRight);
+            Label(root, "Wallet caption", new Rect(295, 22, 160, 17), "보유 금액", 12, new Color32(151, 167, 175, 255), TextAnchor.MiddleRight);
             money = Label(root, "Wallet", new Rect(255, 42, 200, 32), "0 G", 25, gold, TextAnchor.MiddleRight);
             depth = Label(root, "Depth", new Rect(300, 82, 154, 15), "", 10, new Color32(151, 167, 175, 255), TextAnchor.MiddleRight);
             Box(root, "Footer", new Rect(0, Height - 42, Width, 42), dark);
             status = Label(root, "Instructions", new Rect(15, Height - 39, 325, 34), "", 10, new Color32(180, 203, 210, 255), TextAnchor.MiddleLeft);
-            regroupButton = Button(root, "재정비", new Rect(20, 100, 158, 42), new Color32(47, 69, 76, 255), Color.white);
-            shopButton = Button(root, "상점", new Rect(292, 100, 78, 42), new Color32(47, 69, 76, 255), Color.white);
-            upgradeButton = Button(root, "강화", new Rect(380, 100, 80, 42), new Color32(47, 69, 76, 255), Color.white);
+            regroupButton = Button(root, "재정비", new Rect(20, 118, 208, 50), new Color32(47, 69, 76, 255), Color.white);
+            shopButton = Button(root, "상점", new Rect(252, 118, 64, 50), new Color32(47, 69, 76, 255), Color.white);
+            inventoryButton = Button(root, "인벤", new Rect(324, 118, 64, 50), new Color32(47, 69, 76, 255), Color.white);
+            upgradeButton = Button(root, "강화", new Rect(396, 118, 64, 50), new Color32(47, 69, 76, 255), Color.white);
             resetButton = Button(root, "데이터 초기화", new Rect(354, 814, 112, 34), new Color32(62, 39, 42, 255), new Color32(241, 163, 151, 255), 11);
             readyButton = Button(root, "Dig!!", new Rect(125, 530, 230, 64), gold, dark, 30);
             readyHint = Label(root, "Start hint", new Rect(70, 607, 340, 25), "Dig!!를 눌러 채굴 시작", 14, Color.white, TextAnchor.MiddleCenter);
@@ -110,17 +126,11 @@ namespace DigDeep
             detail = Label(overlay, "Description", new Rect(25, 77, 350, 63), "", 15, Color.white, TextAnchor.MiddleCenter);
             var button = Box(overlay, "Play or restart", new Rect(45, 159, 310, 57), gold);
             mainLabel = Label(button.transform, "Label", new Rect(0, 0, 310, 57), "다시 준비", 24, dark, TextAnchor.MiddleCenter);
-            modal = RectNode(root, "Dialog layer", new Rect(0, 0, Width, Height));
-            Box(modal, "Dim backdrop", new Rect(0, 0, Width, Height), new Color(0, 0, 0, .75f));
-            var panel = Box(modal, "Dialog", new Rect(35, 290, 410, 290), dark);
-            Box(panel.transform, "Accent", new Rect(0, 0, 410, 3), gold);
-            modalTitle = Label(modal, "Dialog title", new Rect(55, 315, 370, 42), "", 25, gold, TextAnchor.MiddleCenter);
-            modalBody = Label(modal, "Dialog explanation", new Rect(60, 369, 360, 98), "", 16, Color.white, TextAnchor.MiddleCenter);
-            var cancel = Box(modal, "Cancel", new Rect(60, 496, 170, 48), new Color32(46, 61, 70, 255));
-            modalCancel = Label(cancel.transform, "Label", new Rect(0, 0, 170, 48), "취소", 17, Color.white, TextAnchor.MiddleCenter);
-            confirmButton = Box(modal, "Confirm", new Rect(250, 496, 170, 48), new Color32(175, 61, 50, 255));
-            modalConfirm = Label(confirmButton.transform, "Label", new Rect(0, 0, 170, 48), "계속", 17, Color.white, TextAnchor.MiddleCenter);
-            modal.gameObject.SetActive(false);
+            menus = gameObject.AddComponent<GameMenus>(); menus.Initialize(game, root);
+            noticePanel = Box(root, "Mining notice panel", new Rect(35, 190, 410, 45), new Color32(20, 30, 38, 235));
+            notice = Label(noticePanel.transform, "Mining notice", new Rect(6, 0, 398, 45), "", 16, Color.white, TextAnchor.MiddleCenter);
+            noticePanel.gameObject.SetActive(false);
+            tutorialView = gameObject.AddComponent<TutorialView>(); tutorialView.Initialize(game, root);
             game.Session.Impact += OnImpact;
             Layout();
         }
@@ -149,69 +159,88 @@ namespace DigDeep
             {
                 int row = startRow + i / 5, col = i % 5;
                 var cell = new Vector2Int(col, row);
-                int hp = session.Health(cell);
+                float hp = session.Health(cell);
                 var tile = tiles[i]; tile.Image.gameObject.SetActive(hp > 0);
                 if (hp == 0) continue;
                 tile.Rect.anchoredPosition = new Vector2(Left + col * Pitch + 1, -(Surface + row * Pitch + 1));
-                tile.Image.sprite = row == 0 ? game.grass : game.stone;
+                float impactAge = Time.unscaledTime - impactTime;
+                if (!dragging && cell == impactCell && impactAge < .13f) tile.Rect.anchoredPosition += new Vector2(Mathf.Sin(impactAge * 90) * 2, 0);
+                tile.Image.sprite = game.BlockSprite(session.Kind(cell), row);
                 float shade = Mathf.Clamp(1 - row * .005f, .66f, 1);
                 tile.Image.color = new Color(shade, shade, shade);
-                bool damaged = hp < session.HealthMaximum;
-                for (int j = 0; j < 3; j++) tile.Cracks[j].gameObject.SetActive(damaged && hp <= session.HealthMaximum * (1 - j * .25f));
+                int maximum = session.MaximumHealth(cell);
+                bool damaged = hp < maximum;
+                for (int j = 0; j < 3; j++) tile.Cracks[j].gameObject.SetActive(damaged && hp <= maximum * (1 - j * .25f));
                 tile.Health.gameObject.SetActive(damaged);
-                tile.Health.rectTransform.sizeDelta = new Vector2(66f * hp / session.HealthMaximum, 3);
+                tile.Health.rectTransform.sizeDelta = new Vector2(66f * hp / maximum, 3);
             }
             var position = Center(session.Position);
+            if (game.IsSwinging) position = Center(game.SwingOrigin);
             if (dragging) position = new Vector2(dragPoint.x, dragPoint.y + scroll);
             pickRect.anchoredPosition = new Vector2(position.x, -position.y);
-            pickImage.sprite = session.Picks[session.Selected].Name == "WOOD" ? game.wood : game.iron;
+            pickImage.sprite = game.PickSprite(session.Picks[session.Selected].Name);
             pickImage.color = session.CanMine || session.State == SessionState.Ready ? Color.white : new Color(.42f, .42f, .42f);
-            float angle = game.IsSwinging ? Mathf.Sin(game.SwingProgress * Mathf.PI * 2) * 42 : -8;
-            pickRect.localEulerAngles = new Vector3(0, 0, angle);
-            if (game.IsSwinging && session.Target.HasValue)
+            float angle = IdlePickAngle;
+            if (game.IsSwinging)
             {
-                Vector2 direction = Center(session.Target.Value) - Center(session.Position);
-                pickRect.anchoredPosition += new Vector2(direction.x, -direction.y).normalized * (Mathf.Sin(game.SwingProgress * Mathf.PI) * 17);
+                Vector2 direction = Center(game.SwingCell) - Center(game.SwingOrigin);
+                Vector2 motion = new Vector2(direction.x, -direction.y).normalized;
+                angle = Mathf.Atan2(motion.y, motion.x) * Mathf.Rad2Deg - 90 + Mathf.Cos(game.SwingProgress * Mathf.PI * 2) * 42;
+                pickRect.anchoredPosition += motion * (Mathf.Sin(game.SwingProgress * Mathf.PI) * 17);
             }
-            for (int i = 0; i < 2; i++)
+            pickRect.localEulerAngles = new Vector3(0, 0, angle);
+            for (int i = 0; i < 4; i++)
             {
                 cards[i].gameObject.SetActive(i < session.Picks.Length);
                 if (i >= session.Picks.Length) continue;
                 var pick = session.Picks[i];
-                icons[i].sprite = pick.Name == "WOOD" ? game.wood : game.iron;
+                icons[i].sprite = game.PickSprite(pick.Name);
                 cards[i].color = i == session.Selected ? gold : new Color32(59, 73, 81, 255);
-                bars[i].rectTransform.sizeDelta = new Vector2(59f * pick.Remaining / pick.Maximum, 5);
+                bars[i].rectTransform.sizeDelta = new Vector2(39f * pick.Remaining / pick.Maximum, 5);
                 durability[i].text = pick.Remaining == 0 ? "소진" : pick.Remaining + " / " + pick.Maximum;
                 durability[i].color = pick.Remaining == 0 ? new Color32(224, 124, 109, 255) : Color.white;
             }
-            money.text = session.Money.ToString("N0") + " G";
+            money.text = session.Money.ToString("N0") + "원";
             depth.text = "최대 깊이  " + session.Deepest;
             bool playing = session.State == SessionState.Playing;
             bool ready = session.State == SessionState.Ready;
             overlay.gameObject.SetActive(session.State == SessionState.GameOver);
             readyButton.gameObject.SetActive(ready); readyHint.gameObject.SetActive(ready);
             regroupButton.gameObject.SetActive(playing);
-            shopButton.gameObject.SetActive(!playing); upgradeButton.gameObject.SetActive(!playing);
+            shopButton.gameObject.SetActive(!playing); upgradeButton.gameObject.SetActive(!playing); inventoryButton.gameObject.SetActive(!playing);
             resetButton.gameObject.SetActive(!playing);
             title.text = "채굴 종료";
-            detail.text = "이번 채굴 +" + session.RunIncome + " G\n곡괭이를 회복하고 다시 도전하세요";
+            detail.text = "돌 수입 +" + session.RunIncome + "원 · 석탄 " + session.RunCoal + "개\n철 " + session.RunIron + "개 · 금 " + session.RunGold + "개\n곡괭이를 회복하고 다시 도전하세요";
             mainLabel.text = "다시 준비"; mainLabel.fontSize = 20;
             status.text = playing
-                ? (!session.CanMine ? "소진 · 왼쪽 위에서 곡괭이를 선택하세요" : dragging ? "좌우 · 위 5칸까지 이동" : "탭 · 길게 누르기 · 곡괭이 드래그")
+                ? (!session.CanMine ? "소진 · 왼쪽 위에서 곡괭이를 선택하세요" : dragging ? "상하좌우 · 시작 위치에서 5칸" : "탭 · 길게 누르기 · 곡괭이 드래그")
                 : "성장 정보 자동 저장 · 가로 5칸";
             if (!string.IsNullOrEmpty(game.SaveWarning)) status.text = game.SaveWarning;
-            UpdateDialog();
+            menus.Refresh();
+            tutorialView.Refresh();
             UpdateParticles();
+            UpdateFeedback();
         }
 
-        public void OnImpact(Vector2Int cell, int damage, bool broken)
+        public void OnImpact(Vector2Int cell, float damage, bool broken)
         {
             impactCell = cell; impactTime = Time.unscaledTime;
+            Color tint = OreColor(game.Session.Kind(cell));
             for (int i = 0; i < chips.Count; i++)
             {
                 var chip = chips[i]; chip.Born = impactTime; chip.Start = Center(cell);
                 chip.Velocity = new Vector2(Mathf.Sin(i * 2.4f) * (broken ? 105 : 65), -65 - i * 8);
-                chip.Image.gameObject.SetActive(i < (broken ? 12 : 5));
+                chip.Tint = Color.Lerp(tint, Color.white, .15f);
+                chip.Image.gameObject.SetActive(i < (broken ? 9 : 4));
+            }
+            impactFlash.rectTransform.anchoredPosition = new Vector2(Left + cell.x * Pitch + 1, -(Surface + cell.y * Pitch + 1));
+            impactFlash.color = new Color(1, 1, 1, broken ? .35f : .2f); impactFlash.gameObject.SetActive(true);
+            var ore = OreCatalog.Find(game.Session.Kind(cell));
+            if (broken && ore != null)
+            {
+                var reward = rewards[nextReward]; nextReward = (nextReward + 1) % rewards.Length;
+                reward.Start = Center(cell) - new Vector2(75, 30); reward.Born = impactTime;
+                reward.Text.text = ore.Name + " +1"; reward.Text.color = tint; reward.Text.gameObject.SetActive(true);
             }
         }
 
@@ -224,7 +253,36 @@ namespace DigDeep
                 if (elapsed > .45f) { chip.Image.gameObject.SetActive(false); continue; }
                 Vector2 point = chip.Start + chip.Velocity * elapsed + new Vector2(0, 220 * elapsed * elapsed);
                 chip.Rect.anchoredPosition = new Vector2(point.x, -point.y);
-                chip.Image.color = new Color(.68f, .66f, .59f, 1 - elapsed / .45f);
+                var color = chip.Tint; color.a = 1 - elapsed / .45f; chip.Image.color = color;
+            }
+        }
+        public static Color OreColor(Mineral kind) => kind == Mineral.Coal ? new Color32(43, 47, 52, 255) : kind == Mineral.Iron ? new Color32(196, 137, 92, 255) : kind == Mineral.Gold ? new Color32(240, 193, 40, 255) : new Color32(157, 153, 141, 255);
+        public void ShowNotice(string message, bool error = true)
+        {
+            if (notice.text == message && Time.unscaledTime < noticeUntil - .7f) return;
+            notice.text = message; noticeUntil = Time.unscaledTime + 1.7f; noticeColor = error ? new Color32(255, 173, 148, 255) : new Color32(179, 238, 200, 255);
+        }
+        public void ResetRunVisuals()
+        {
+            scroll = 0; impactTime = -10; noticeUntil = 0;
+            foreach (var chip in chips) chip.Image.gameObject.SetActive(false);
+            foreach (var reward in rewards) reward.Text.gameObject.SetActive(false);
+            impactFlash.gameObject.SetActive(false);
+        }
+        void UpdateFeedback()
+        {
+            noticePanel.gameObject.SetActive(Time.unscaledTime < noticeUntil);
+            var noticeTint = noticeColor; noticeTint.a = Mathf.Clamp01((noticeUntil - Time.unscaledTime) * 4); notice.color = noticeTint;
+            float flashAge = Time.unscaledTime - impactTime;
+            impactFlash.gameObject.SetActive(flashAge < .14f);
+            var flash = impactFlash.color; flash.a = Mathf.Clamp01(1 - flashAge / .14f) * .3f; impactFlash.color = flash;
+            foreach (var reward in rewards)
+            {
+                if (!reward.Text.gameObject.activeSelf) continue;
+                float age = Time.unscaledTime - reward.Born;
+                if (age > .8f) { reward.Text.gameObject.SetActive(false); continue; }
+                var position = reward.Start + new Vector2(0, -age * 38); reward.Text.rectTransform.anchoredPosition = new Vector2(position.x, -position.y);
+                var color = reward.Text.color; color.a = Mathf.Clamp01((.8f - age) * 4); reward.Text.color = color;
             }
         }
 
@@ -242,64 +300,32 @@ namespace DigDeep
             Vector2 center = Center(game.Session.Position) - new Vector2(0, scroll);
             return new Rect(center.x - 38, center.y - 38, 76, 76).Contains(point);
         }
+        public Rect PickBounds()
+        { var center = Center(game.Session.Position) - new Vector2(0, scroll); return new Rect(center.x - 38, center.y - 38, 76, 76); }
+        public Rect CellBounds(Vector2Int cell) => new Rect(Left + cell.x * Pitch, Surface + cell.y * Pitch - scroll, Pitch, Pitch);
         public string ActionAt(Vector2 point)
         {
-            if (game.Modal != GameModal.None)
-            {
-                if (new Rect(60, 496, 170, 48).Contains(point)) return "close";
-                if (new Rect(250, 496, 170, 48).Contains(point))
-                {
-                    if (game.Modal == GameModal.ResetWarning) return "reset-next";
-                    if (game.Modal == GameModal.ResetConfirm) return "reset-confirm";
-                }
-                return "blocked";
-            }
+            if (tutorialView.BlocksPoint(point)) return "blocked";
+            var action = BaseActionAt(point);
+            return action == null || game.Tutorial.AllowsAction(action) ? action : "blocked";
+        }
+        string BaseActionAt(Vector2 point)
+        {
+            if (game.Modal != GameModal.None) return menus.ActionAt(point);
             var state = game.Session.State;
             if (state == SessionState.Ready && new Rect(125, 530, 230, 64).Contains(point)) return "play";
             if (state == SessionState.GameOver && new Rect(85, 504, 310, 57).Contains(point)) return "restart";
             if (state != SessionState.Playing)
             {
-                if (new Rect(292, 100, 78, 42).Contains(point)) return "shop";
-                if (new Rect(380, 100, 80, 42).Contains(point)) return "upgrade";
+                if (new Rect(252, 118, 64, 50).Contains(point)) return "shop";
+                if (new Rect(324, 118, 64, 50).Contains(point)) return "inventory";
+                if (new Rect(396, 118, 64, 50).Contains(point)) return "upgrade";
                 if (new Rect(354, 814, 112, 34).Contains(point)) return "reset";
             }
-            else if (new Rect(20, 100, 158, 42).Contains(point)) return "regroup";
+            else if (new Rect(20, 118, 208, 50).Contains(point)) return "regroup";
             foreach (var pair in actions) if (pair.Value.Contains(point)) return pair.Key;
             if (!InField(point) || state != SessionState.Playing) return "blocked";
             return null;
-        }
-
-        void UpdateDialog()
-        {
-            var value = game.Modal;
-            modal.gameObject.SetActive(value != GameModal.None);
-            bool reset = value == GameModal.ResetWarning || value == GameModal.ResetConfirm;
-            confirmButton.gameObject.SetActive(reset);
-            modalCancel.text = reset ? "취소" : "닫기";
-            if (value == GameModal.ResetWarning)
-            {
-                modalTitle.text = "데이터 초기화";
-                modalBody.text = "돈 · 소유 곡괭이 · 강화 정보가\n모두 초기화됩니다.\n계속하시겠습니까?";
-                modalConfirm.text = "계속";
-            }
-            else if (value == GameModal.ResetConfirm)
-            {
-                modalTitle.text = "정말 초기화할까요?";
-                modalBody.text = "삭제한 데이터는 복구할 수 없습니다.\n모든 성장 정보를 지우고\n처음부터 시작합니다.";
-                modalConfirm.text = "데이터 초기화";
-            }
-            else if (value == GameModal.Shop)
-            {
-                modalTitle.text = "곡괭이 상점";
-                modalBody.text = "보유 골드  " + game.Session.Money.ToString("N0") + " G\n\n구매 기능은 준비 중입니다.";
-            }
-            else if (value == GameModal.Upgrade)
-            {
-                modalTitle.text = "곡괭이 강화";
-                var pick = game.Session.Picks[game.Session.Selected];
-                modalBody.text = (pick.Name == "WOOD" ? "나무 곡괭이" : "철 곡괭이") + "  +" + pick.Upgrade
-                    + "\n공격력 " + pick.Power + " · 최대 내구도 " + pick.Maximum + "\n강화 기능은 준비 중입니다.";
-            }
         }
 
         public void SetDrag(Vector2 point)
@@ -319,8 +345,20 @@ namespace DigDeep
                 }
         }
         public void EndDrag()
-        { dragging = false; marker.gameObject.SetActive(false); foreach (var image in routeMarkers) image.gameObject.SetActive(false); }
+        { dragging = false; marker.gameObject.SetActive(false); foreach (var image in routeMarkers) image.gameObject.SetActive(false); menus.EndScroll(); }
+        public bool BeginMenuScroll(Vector2 point) => menus.BeginScroll(point);
+        public void DragMenuScroll(float distance) => menus.DragScroll(distance);
+        public void MenuWheel(Vector2 point, float distance) => menus.Wheel(point, distance);
         static Vector2 Center(Vector2Int cell) => new Vector2(Left + (cell.x + .5f) * Pitch, Surface + (cell.y + .5f) * Pitch);
+        public static void TiltPickIcon(Image image)
+        {
+            var rect = image.rectTransform;
+            rect.anchoredPosition += new Vector2(rect.sizeDelta.x * .5f, -rect.sizeDelta.y * .5f);
+            rect.pivot = new Vector2(.5f, .5f);
+            rect.localEulerAngles = new Vector3(0, 0, IdlePickAngle);
+            rect.localScale = Vector3.one * .82f;
+            image.preserveAspect = true;
+        }
 
         static RectTransform RectNode(Transform parent, string name, Rect rect)
         {

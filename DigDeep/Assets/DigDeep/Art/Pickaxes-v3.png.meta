@@ -1,16 +1,28 @@
 fileFormatVersion: 2
-guid: a06272289644bab4282c8fef189d7ba3
+guid: c1aea54c39087894893c94f5ad196fec
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -8274051818660498579
-    second: CompactPickaxes_0
+      213: 5712015489227780475
+    second: Pickaxes-v3_0
   - first:
-      213: -1242352845360307271
-    second: CompactPickaxes_1
+      213: 7157812886091885808
+    second: Pickaxes-v3_1
   - first:
-      213: 5088786020944755287
-    second: CompactPickaxes_2
+      213: -2275911295761280347
+    second: Pickaxes-v3_2
+  - first:
+      213: 1136864990687928073
+    second: Pickaxes-v3_3
+  - first:
+      213: -7363063049264677902
+    second: Pickaxes-v3_4
+  - first:
+      213: 3078365652261261197
+    second: Pickaxes-v3_5
+  - first:
+      213: 1856736248850664096
+    second: Pickaxes-v3_6
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -30,7 +42,7 @@ TextureImporter:
     heightScale: 0.25
     normalMapFilter: 0
     flipGreenChannel: 0
-  isReadable: 1
+  isReadable: 0
   streamingMipmaps: 0
   streamingMipmapsPriority: 0
   vTOnly: 0
@@ -78,7 +90,7 @@ TextureImporter:
   platformSettings:
   - serializedVersion: 4
     buildTarget: DefaultTexturePlatform
-    maxTextureSize: 2048
+    maxTextureSize: 4096
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 0
@@ -102,17 +114,30 @@ TextureImporter:
     ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: CompactWood
+      name: SymmetricWood
       rect:
         serializedVersion: 2
-        x: 178
-        y: 343
-        width: 417
-        height: 414
+        x: 25
+        y: 117
+        width: 504
+        height: 479
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -121,20 +146,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 68ad873a7b82d4d4f95c85121dcb9053
-      internalID: -276711901
+      spriteID: 5e67e42017c61cc469443c4842de1261
+      internalID: -1394585110
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CompactIron
+      name: SymmetricStone
       rect:
         serializedVersion: 2
-        x: 713
-        y: 343
-        width: 453
-        height: 414
+        x: 566
+        y: 117
+        width: 504
+        height: 479
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -143,8 +168,52 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: c1b89af8d9a5efb4b80ed132ef7ed830
-      internalID: 318530368
+      spriteID: 8a581f1f4873552419734fbf8192a69d
+      internalID: 1154722353
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SymmetricIron
+      rect:
+        serializedVersion: 2
+        x: 1107
+        y: 117
+        width: 504
+        height: 479
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2ea8d70e7b807bb47a77054ae1de6fac
+      internalID: 1907765224
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SymmetricAlloy
+      rect:
+        serializedVersion: 2
+        x: 1646
+        y: 117
+        width: 504
+        height: 479
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 04f5d049396293f4f9c7de9f8783d397
+      internalID: -571192336
       vertices: []
       indices: 
       edges: []
@@ -153,7 +222,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 5ec7cbcddae830747a6a9f75b2baefd6
+    spriteID: ef2606156938bdb43931355924839a97
     internalID: 0
     vertices: []
     indices: 
@@ -163,8 +232,10 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      CompactIron: 318530368
-      CompactWood: -276711901
+      SymmetricAlloy: -571192336
+      SymmetricIron: 1907765224
+      SymmetricStone: 1154722353
+      SymmetricWood: -1394585110
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

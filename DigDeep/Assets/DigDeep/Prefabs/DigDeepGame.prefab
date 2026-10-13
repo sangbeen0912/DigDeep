@@ -47,6 +47,11 @@ MonoBehaviour:
   settings: {fileID: 11400000, guid: c664371bc865e6d43b1b5a489ccaaac3, type: 2}
   stone: {fileID: -989012747, guid: cc5c5f08b3ee5bd45aa5549d01a40e1c, type: 3}
   grass: {fileID: 1620990502, guid: cc5c5f08b3ee5bd45aa5549d01a40e1c, type: 3}
-  wood: {fileID: -276711901, guid: a06272289644bab4282c8fef189d7ba3, type: 3}
-  iron: {fileID: 318530368, guid: a06272289644bab4282c8fef189d7ba3, type: 3}
+  wood: {fileID: -1394585110, guid: c1aea54c39087894893c94f5ad196fec, type: 3}
+  stonePick: {fileID: 1154722353, guid: c1aea54c39087894893c94f5ad196fec, type: 3}
+  iron: {fileID: 1907765224, guid: c1aea54c39087894893c94f5ad196fec, type: 3}
+  alloy: {fileID: -571192336, guid: c1aea54c39087894893c94f5ad196fec, type: 3}
+  coalOre: {fileID: -2044532295, guid: 9b7b26b5335d37749b23b48fdc7fe01a, type: 3}
+  ironOre: {fileID: -583251808, guid: 9b7b26b5335d37749b23b48fdc7fe01a, type: 3}
+  goldOre: {fileID: -71368949, guid: 9b7b26b5335d37749b23b48fdc7fe01a, type: 3}
   font: {fileID: 12800000, guid: 995492bfe62ca8149a3bc1e6ea771ebe, type: 3}
