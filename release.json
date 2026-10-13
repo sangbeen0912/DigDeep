@@ -1,0 +1,27 @@
+{
+  "game": "DigDeep",
+  "built_at": "2026-10-13T14:58:47.838843+00:00",
+  "source_commit": "fab3902b6e292ebb68f0699a3a971771f27055b2",
+  "assets": [
+    {
+      "path": "Build/Web.349586017412.data",
+      "sha256": "3495860174129329c232f6c2b1037c0bb695211ab4a8f899c6c788b1890e2f51",
+      "bytes": 21615267
+    },
+    {
+      "path": "Build/Web.274f5ac2e4bb.framework.js",
+      "sha256": "274f5ac2e4bb1123ae81ab69fb9e468442d57b0da9b9d9214b7e393280c5a586",
+      "bytes": 440552
+    },
+    {
+      "path": "Build/Web.23db57de02da.loader.js",
+      "sha256": "23db57de02dabd2b4912bbe77410f5d3818299e24cad02ec5cb3c880a19bbaf3",
+      "bytes": 26983
+    },
+    {
+      "path": "Build/Web.6c2c60cd891c.wasm",
+      "sha256": "6c2c60cd891c2828cfe8acb89686477e2cceafa1003af6402323b01c355b6732",
+      "bytes": 48372902
+    }
+  ]
+}
