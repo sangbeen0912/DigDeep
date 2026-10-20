@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 namespace DigDeep
@@ -13,6 +14,11 @@ namespace DigDeep
         Image[] pickCards = new Image[4], pickIcons = new Image[4];
         Text[] pickLabels = new Text[4];
         Image buyTab, sellTab;
+        RectTransform refinery, conversion, requirementTable;
+        Image upgradeTab, convertTab, conversionButton, converterImage;
+        Text energy, conversionInfo, conversionAmount, conversionGain, upgradeSummary, requirementStatus;
+        sealed class RequirementRow { public Image Background, Icon; public Text Name, Needed, Owned; }
+        readonly RequirementRow[] requirementRows = new RequirementRow[4];
         Text saleEmpty, inventoryEmpty;
         sealed class OreRow { public OreEntry Entry; public Image Card; public Text Label; }
         sealed class OreList
@@ -21,7 +27,7 @@ namespace DigDeep
             public readonly List<OreRow> Visible = new List<OreRow>();
             public float Offset, RowHeight, Maximum;
         }
-        OreList saleList, inventoryList, scrolling;
+        OreList saleList, inventoryList, conversionList, scrolling;
         float scrollOrigin;
         readonly Dictionary<string, Rect> actions = new Dictionary<string, Rect>();
         Color dark = new Color32(20, 30, 38, 255), gold = new Color32(239, 189, 88, 255), muted = new Color32(48, 62, 72, 255);
@@ -54,13 +60,20 @@ namespace DigDeep
             Action(saleFooter, "sale-all", new Rect(340, 583, 85, 40), "전부", muted, Color.white);
             saleButton = Action(saleFooter, "sell", new Rect(55, 635, 370, 40), "판매", gold, dark);
             inventory = Node(layer, "Inventory content", new Rect(0, 0, 480, 854));
-            inventoryList = CreateList(inventory, "Discovered inventory list", new Rect(55, 319, 370, 256), 112);
+            var energyCard = Box(inventory, "Energy inventory card", new Rect(55, 299, 370, 58), muted);
+            Box(energyCard.transform, "Energy accent", new Rect(0, 0, 4, 58), new Color32(63, 216, 231, 255));
+            var energyName = Label(energyCard.transform, "Energy name", new Rect(16, 0, 130, 58), "에너지", 18, Color.white); energyName.alignment = TextAnchor.MiddleLeft;
+            energy = Label(energyCard.transform, "Energy amount", new Rect(147, 0, 205, 58), "", 24, new Color32(101, 233, 242, 255)); energy.alignment = TextAnchor.MiddleRight;
+            inventoryList = CreateList(inventory, "Discovered inventory list", new Rect(55, 368, 370, 207), 112);
             inventoryEmpty = Label(inventory, "Empty inventory", new Rect(55, 389, 370, 80), "아직 확인한 광물이 없어요.\n채굴한 광물이 여기에 보관됩니다.", 16, Color.white);
             Label(inventory, "Sale hint", new Rect(45, 594, 390, 34), "광물은 상점에서 판매할 수 있어요", 15, gold);
-            upgrades = Node(layer, "Upgrade selection", new Rect(0, 0, 480, 854));
+            refinery = Node(layer, "Refinery content", new Rect(0, 0, 480, 854));
+            upgradeTab = Action(refinery, "refinery-upgrade", new Rect(55, 298, 178, 36), "강화", muted, Color.white);
+            convertTab = Action(refinery, "refinery-convert", new Rect(247, 298, 178, 36), "변환", muted, Color.white);
+            upgrades = Node(refinery, "Upgrade selection", new Rect(0, 0, 480, 854));
             for (int i = 0; i < 4; i++)
             {
-                var rect = new Rect(55 + i % 2 * 192, 313 + i / 2 * 133, 178, 119);
+                var rect = new Rect(55 + i % 2 * 192, 346 + i / 2 * 126, 178, 119);
                 pickCards[i] = Action(upgrades, "upgrade-pick" + i, rect, "", muted, Color.white);
                 pickCards[i].GetComponentInChildren<Text>().gameObject.SetActive(false);
                 pickIcons[i] = Box(pickCards[i].transform, "Icon", new Rect(62, 7, 54, 54), Color.white);
@@ -68,8 +81,10 @@ namespace DigDeep
                 pickLabels[i] = Label(pickCards[i].transform, "Stats", new Rect(5, 64, 168, 47), "", 13, Color.white);
             }
             Label(upgrades, "Upgrade hint", new Rect(45, 606, 390, 30), "강화할 곡괭이를 선택하세요", 15, gold);
+            CreateConversion();
             confirmation = Node(layer, "Confirmation content", new Rect(0, 0, 480, 854));
             body = Label(confirmation, "Requirements", new Rect(48, 315, 384, 210), "", 18, Color.white);
+            CreateRequirements();
             confirmButton = Action(confirmation, "confirm", new Rect(55, 565, 370, 55), "", gold, dark);
             confirmLabel = confirmButton.GetComponentInChildren<Text>();
             Action(layer, "close", new Rect(55, 686, 370, 34), "뒤로가기", muted, Color.white);
@@ -81,8 +96,12 @@ namespace DigDeep
             layer.gameObject.SetActive(modal != GameModal.None);
             if (modal == GameModal.None) return;
             shop.gameObject.SetActive(modal == GameModal.Shop); inventory.gameObject.SetActive(modal == GameModal.Inventory);
-            upgrades.gameObject.SetActive(modal == GameModal.Upgrade);
+            refinery.gameObject.SetActive(modal == GameModal.Upgrade);
+            upgrades.gameObject.SetActive(game.RefineryTab == RefineryPage.Upgrade);
+            conversion.gameObject.SetActive(game.RefineryTab == RefineryPage.Conversion);
             confirmation.gameObject.SetActive(modal == GameModal.UpgradeConfirm || modal == GameModal.ResetWarning || modal == GameModal.ResetConfirm);
+            bool upgrading = modal == GameModal.UpgradeConfirm;
+            requirementTable.gameObject.SetActive(upgrading); body.gameObject.SetActive(!upgrading);
             wallet.text = "보유 금액  " + session.Money.ToString("N0") + "원";
             if (modal == GameModal.Shop)
             {
@@ -108,11 +127,15 @@ namespace DigDeep
             else if (modal == GameModal.Inventory)
             {
                 title.text = "인벤토리";
+                energy.text = GameSettings.FormatEnergy(session.EnergyTenths);
                 UpdateList(inventoryList, false); inventoryEmpty.gameObject.SetActive(inventoryList.Visible.Count == 0);
             }
             else if (modal == GameModal.Upgrade)
             {
-                title.text = "곡괭이 강화";
+                title.text = "제련";
+                upgradeTab.color = game.RefineryTab == RefineryPage.Upgrade ? new Color32(68, 108, 112, 255) : muted;
+                convertTab.color = game.RefineryTab == RefineryPage.Conversion ? new Color32(68, 108, 112, 255) : muted;
+                if (game.RefineryTab == RefineryPage.Conversion) RefreshConversion();
                 for (int i = 0; i < 4; i++)
                 {
                     pickCards[i].gameObject.SetActive(i < session.Picks.Length); if (i >= session.Picks.Length) continue;
@@ -122,15 +145,8 @@ namespace DigDeep
             }
             else if (modal == GameModal.UpgradeConfirm)
             {
-                title.text = "강화 확인"; int i = game.UpgradeIndex; var pick = session.Picks[i];
-                int cost = session.UpgradeCost(i), ore = session.UpgradeOre(i), coal = session.UpgradeCoal(i), goldOre = session.UpgradeGold(i);
-                if (cost < 0) body.text = (i + 1) + "번 " + PickName(pick.Name) + "\n현재 마지막 강화 단계입니다.";
-                else body.text = (i + 1) + "번 " + PickName(pick.Name) + " → " + PickName(GameSettings.NextPick(pick.Name))
-                    + "\n\n필요 금액 " + cost + "원 / 보유 " + session.Money + "원"
-                    + (coal > 0 ? "\n석탄 " + coal + "개 / 보유 " + session.Coal + "개" : "")
-                    + (ore > 0 ? "\n철광석 " + ore + "개 / 보유 " + session.Iron + "개" : "")
-                    + (goldOre > 0 ? "\n금광석 " + goldOre + "개 / 보유 " + session.Gold + "개" : "")
-                    + (session.CanUpgrade(i) ? "\n강화할 수 있습니다." : "\n재료 또는 돈이 부족합니다.");
+                title.text = "강화 확인"; int i = game.UpgradeIndex;
+                int cost = session.UpgradeCost(i); RefreshRequirements(i);
                 confirmButton.gameObject.SetActive(cost >= 0);
                 confirmButton.color = session.CanUpgrade(i) ? gold : muted; confirmLabel.text = "강화";
                 confirmLabel.color = session.CanUpgrade(i) ? dark : new Color32(173, 185, 191, 255);
@@ -139,7 +155,7 @@ namespace DigDeep
             {
                 bool second = modal == GameModal.ResetConfirm;
                 title.text = second ? "정말 초기화할까요?" : "데이터 초기화";
-                body.text = second ? "삭제한 데이터는 복구할 수 없습니다.\n돈 · 광물 · 곡괭이 · 강화 정보를 지우고\n나무 곡괭이 하나로 시작합니다." : "돈 · 광물 · 소유 곡괭이 · 강화 정보가\n모두 초기화됩니다.\n계속하시겠습니까?";
+                body.text = second ? "삭제한 데이터는 복구할 수 없습니다.\n돈 · 광물 · 에너지 · 곡괭이와\n기록 · 튜토리얼을 모두 지웁니다.\n나무 곡괭이 하나로 시작합니다." : "돈 · 광물 · 에너지 · 소유 곡괭이와\n강화 · 최고 기록 · 튜토리얼 진행이\n모두 초기화됩니다.\n계속하시겠습니까?";
                 confirmButton.gameObject.SetActive(true); confirmButton.color = new Color32(175, 61, 50, 255);
                 confirmLabel.text = second ? "데이터 초기화" : "계속";
                 confirmLabel.color = Color.white;
@@ -167,6 +183,20 @@ namespace DigDeep
             }
             else if (modal == GameModal.Upgrade)
             {
+                if (actions["refinery-upgrade"].Contains(point)) return "refinery-upgrade";
+                if (actions["refinery-convert"].Contains(point)) return "refinery-convert";
+                if (game.RefineryTab == RefineryPage.Conversion)
+                {
+                    UpdateList(conversionList, true);
+                    if (conversionList.Area.Contains(point))
+                    {
+                        int index = Mathf.FloorToInt((point.y - conversionList.Area.y + conversionList.Offset) / conversionList.RowHeight);
+                        return index >= 0 && index < conversionList.Visible.Count ? "convert-ore-" + conversionList.Visible[index].Entry.Id : "blocked";
+                    }
+                    foreach (var action in new[] { "convert-less", "convert-more", "convert-all" }) if (actions[action].Contains(point)) return action;
+                    if (actions["convert"].Contains(point) && s.CanConvert(game.ConversionKind, game.ConversionQuantity)) return "convert";
+                    return "blocked";
+                }
                 for (int i = 0; i < s.Picks.Length; i++) if (actions["upgrade-pick" + i].Contains(point)) return "upgrade-pick" + i;
             }
             else if (actions["confirm"].Contains(point))
@@ -177,16 +207,17 @@ namespace DigDeep
             }
             return "blocked";
         }
-        OreList CreateList(Transform parent, string name, Rect area, float height)
+        OreList CreateList(Transform parent, string name, Rect area, float height, OreEntry[] entries = null)
         {
+            entries = entries ?? OreCatalog.All;
             var viewport = Node(parent, name, area); viewport.gameObject.AddComponent<RectMask2D>();
             var list = new OreList { Area = area, RowHeight = height,
-                Content = Node(viewport, "Scrollable content", new Rect(0, 0, area.width, 0)), Rows = new OreRow[OreCatalog.All.Length] };
+                Content = Node(viewport, "Scrollable content", new Rect(0, 0, area.width, 0)), Rows = new OreRow[entries.Length] };
             for (int i = 0; i < list.Rows.Length; i++)
             {
-                var entry = OreCatalog.All[i];
+                var entry = entries[i];
                 var card = Box(list.Content, entry.Id, new Rect(0, 0, area.width, height - 6), muted);
-                Box(card.transform, "Icon", new Rect(12, 10, height - 26, height - 26), Color.white, game.BlockSprite(entry.Kind, -1));
+                Box(card.transform, "Icon", new Rect(12, 10, height - 26, height - 26), entry.Kind == Mineral.Oil ? Color.black : Color.white, game.BlockSprite(entry.Kind, -1));
                 list.Rows[i] = new OreRow { Entry = entry, Card = card,
                     Label = Label(card.transform, "Ore information", new Rect(height, 6, area.width - height - 12, height - 18), "", 15, Color.white) };
             }
@@ -197,22 +228,106 @@ namespace DigDeep
             list.Visible.Clear();
             foreach (var row in list.Rows)
             {
-                bool known = game.Session.IsDiscovered(row.Entry.Kind); row.Card.gameObject.SetActive(known);
+                bool converting = list == conversionList;
+                bool known = converting || game.Session.IsDiscovered(row.Entry.Kind); row.Card.gameObject.SetActive(known);
                 if (!known) continue;
                 row.Card.rectTransform.anchoredPosition = new Vector2(0, -list.Visible.Count * list.RowHeight);
-                row.Card.color = selectable && row.Entry.Kind == game.SaleKind ? new Color32(68, 108, 112, 255) : muted;
-                row.Label.text = row.Entry.Name + "  " + game.Session.Stock(row.Entry.Kind) + "개\n개당 " + game.settings.SellPrice(row.Entry.Kind) + "원"
-                    + (!selectable && row.Entry.UpgradeMaterial ? " · 강화 재료" : "");
+                row.Card.color = selectable && row.Entry.Kind == (converting ? game.ConversionKind : game.SaleKind) ? new Color32(68, 108, 112, 255) : muted;
+                row.Label.text = row.Entry.Name + "  " + game.Session.Stock(row.Entry.Kind).ToString("N0") + "개\n"
+                    + (converting ? "1개 → 에너지 " + GameSettings.FormatEnergy(game.settings.ConversionRate(row.Entry.Kind)) : "개당 " + game.settings.SellPrice(row.Entry.Kind) + "원" + (!selectable && row.Entry.UpgradeMaterial ? " · 강화 재료" : ""));
                 list.Visible.Add(row);
             }
             list.Content.sizeDelta = new Vector2(list.Area.width, list.Visible.Count * list.RowHeight);
             list.Maximum = Mathf.Max(0, list.Content.sizeDelta.y - list.Area.height);
             list.Offset = Mathf.Clamp(list.Offset, 0, list.Maximum); list.Content.anchoredPosition = new Vector2(0, list.Offset);
         }
+        void CreateConversion()
+        {
+            conversion = Node(refinery, "Mineral conversion", new Rect(0, 0, 480, 854));
+            converterImage = Box(conversion, "Energy converter", new Rect(65, 346, 92, 88), Color.white, game.energyConverter); converterImage.preserveAspect = true;
+            conversionInfo = Label(conversion, "Conversion balance", new Rect(174, 348, 251, 80), "", 20, new Color32(101, 233, 242, 255));
+            Label(conversion, "Choose conversion mineral", new Rect(55, 431, 370, 18), "변환할 광물을 선택하세요", 12, Color.white);
+            conversionList = CreateList(conversion, "Convertible mineral list", new Rect(55, 450, 370, 104), 64,
+                OreCatalog.All.Where(e => game.settings.ConversionRate(e.Kind) > 0).ToArray());
+            Action(conversion, "convert-less", new Rect(55, 565, 64, 36), "−", muted, Color.white, 24);
+            conversionAmount = Label(conversion, "Conversion quantity", new Rect(128, 565, 130, 36), "", 21, Color.white);
+            Action(conversion, "convert-more", new Rect(265, 565, 64, 36), "+", muted, Color.white, 24);
+            Action(conversion, "convert-all", new Rect(340, 565, 85, 36), "전부", muted, Color.white);
+            conversionGain = Label(conversion, "Conversion output", new Rect(55, 606, 370, 28), "", 16, Color.white);
+            conversionButton = Action(conversion, "convert", new Rect(55, 640, 370, 36), "에너지로 변환", gold, dark);
+        }
+        void RefreshConversion()
+        {
+            UpdateList(conversionList, true);
+            conversionInfo.text = "보유 에너지\n" + GameSettings.FormatEnergy(game.Session.EnergyTenths);
+            conversionAmount.text = game.ConversionQuantity.ToString("N0");
+            int rate = game.settings.ConversionRate(game.ConversionKind);
+            long gain = (long)rate * game.ConversionQuantity;
+            var entry = OreCatalog.Find(game.ConversionKind);
+            conversionGain.text = entry == null || rate <= 0 ? "변환 가능한 광물이 없어요." : entry.Name + " " + game.ConversionQuantity.ToString("N0") + "개 → 에너지 " + GameSettings.FormatEnergy((int)System.Math.Min(int.MaxValue, gain));
+            bool enabled = game.Session.CanConvert(game.ConversionKind, game.ConversionQuantity);
+            conversionButton.color = enabled ? gold : muted;
+            conversionButton.GetComponentInChildren<Text>().color = enabled ? dark : new Color32(173, 185, 191, 255);
+            float age = Time.unscaledTime - game.LastConversionTime;
+            converterImage.rectTransform.localScale = Vector3.one * (age >= 0 && age < .35f ? 1 + .05f * Mathf.Sin(age / .35f * Mathf.PI) : 1);
+        }
+        void CreateRequirements()
+        {
+            requirementTable = Node(confirmation, "Readable requirements", new Rect(0, 0, 480, 854));
+            upgradeSummary = Label(requirementTable, "Upgrade summary", new Rect(55, 298, 370, 52), "", 16, Color.white);
+            Label(requirementTable, "Material heading", new Rect(60, 355, 140, 26), "재료", 14, new Color32(168, 185, 194, 255));
+            Label(requirementTable, "Required heading", new Rect(212, 355, 103, 26), "필요", 14, new Color32(168, 185, 194, 255));
+            Label(requirementTable, "Owned heading", new Rect(322, 355, 103, 26), "보유", 14, new Color32(168, 185, 194, 255));
+            for (int i = 0; i < requirementRows.Length; i++)
+            {
+                var background = Box(requirementTable, "Requirement row " + i, new Rect(55, 386 + i * 38, 370, 35), muted);
+                var icon = Box(background.transform, "Icon", new Rect(6, 6, 23, 23), Color.white);
+                var name = Label(background.transform, "Material", new Rect(36, 0, 113, 35), "", 15, Color.white); name.alignment = TextAnchor.MiddleLeft;
+                requirementRows[i] = new RequirementRow { Background = background, Icon = icon, Name = name,
+                    Needed = Label(background.transform, "Required amount", new Rect(157, 0, 103, 35), "", 18, Color.white),
+                    Owned = Label(background.transform, "Owned amount", new Rect(267, 0, 103, 35), "", 18, Color.white) };
+            }
+            requirementStatus = Label(requirementTable, "Upgrade availability", new Rect(55, 540, 370, 22), "", 14, Color.white);
+        }
+        void RefreshRequirements(int index)
+        {
+            var s = game.Session; var pick = s.Picks[index]; var next = GameSettings.NextPick(pick.Name);
+            foreach (var row in requirementRows) row.Background.gameObject.SetActive(false);
+            if (next == null)
+            {
+                upgradeSummary.text = (index + 1) + "번 " + PickName(pick.Name) + "\n현재 마지막 강화 단계입니다.";
+                requirementStatus.text = "완성된 곡괭이입니다."; requirementStatus.color = Color.white; return;
+            }
+            upgradeSummary.text = PickName(pick.Name) + " → " + PickName(next) + "\n내구도 " + pick.Maximum + " → " + game.settings.Durability(next) + "  ·  피해 " + pick.Power + " → " + game.settings.Power(next);
+            int slot = 0;
+            void Row(string name, int needed, int owned, Sprite icon, Color tint, bool energyValue = false, bool moneyValue = false)
+            {
+                if (needed <= 0) return;
+                var row = requirementRows[slot++]; row.Background.gameObject.SetActive(true);
+                row.Background.color = owned >= needed ? muted : new Color32(77, 45, 45, 255);
+                row.Icon.sprite = icon; row.Icon.color = tint;
+                row.Name.text = name;
+                string suffix = moneyValue ? "원" : energyValue ? "" : "개";
+                row.Needed.text = (energyValue ? GameSettings.FormatEnergy(needed) : needed.ToString("N0")) + suffix;
+                row.Owned.text = (energyValue ? GameSettings.FormatEnergy(owned) : owned.ToString("N0")) + suffix;
+                row.Owned.fontSize = row.Owned.text.Length > 9 ? 12 : 18;
+                row.Owned.color = owned >= needed ? new Color32(163, 235, 187, 255) : new Color32(255, 156, 143, 255);
+            }
+            Row("돈", s.UpgradeCost(index), s.Money, null, gold, moneyValue: true);
+            Row("석탄", s.UpgradeCoal(index), s.Coal, game.coalOre, Color.white);
+            Row("철광석", s.UpgradeOre(index), s.Iron, game.ironOre, Color.white);
+            Row("금광석", s.UpgradeGold(index), s.Gold, game.goldOre, Color.white);
+            Row("다이아몬드", s.UpgradeDiamond(index), s.Diamond, game.diamondOre, Color.white);
+            Row("에너지", s.UpgradeEnergy(index), s.EnergyTenths, null, new Color32(63, 216, 231, 255), energyValue: true);
+            bool can = s.CanUpgrade(index);
+            requirementStatus.text = can ? "강화할 수 있어요." : "붉게 표시된 재료가 부족해요.";
+            requirementStatus.color = can ? new Color32(163, 235, 187, 255) : new Color32(255, 156, 143, 255);
+        }
         OreList ListAt(Vector2 point)
         {
             if (game.Modal == GameModal.Shop && game.ShopTab == ShopPage.Sell && saleList.Area.Contains(point)) return saleList;
             if (game.Modal == GameModal.Inventory && inventoryList.Area.Contains(point)) return inventoryList;
+            if (game.Modal == GameModal.Upgrade && game.RefineryTab == RefineryPage.Conversion && conversionList.Area.Contains(point)) return conversionList;
             return null;
         }
         public bool BeginScroll(Vector2 point)
@@ -222,7 +337,7 @@ namespace DigDeep
         public void EndScroll() { scrolling = null; }
         public void Wheel(Vector2 point, float distance)
         { if (Mathf.Approximately(distance, 0)) return; var list = ListAt(point); if (list == null) return; UpdateList(list, list == saleList); list.Offset = Mathf.Clamp(list.Offset - distance, 0, list.Maximum); list.Content.anchoredPosition = new Vector2(0, list.Offset); }
-        public static string PickName(string id) => id == "ALLOY" ? "합금 곡괭이" : id == "IRON" ? "철 곡괭이" : id == "STONE" ? "돌 곡괭이" : "나무 곡괭이";
+        public static string PickName(string id) => id == "DIAMOND" ? "다이아 곡괭이" : id == "ALLOY" ? "합금 곡괭이" : id == "IRON" ? "철 곡괭이" : id == "STONE" ? "돌 곡괭이" : "나무 곡괭이";
         Image Action(Transform parent, string id, Rect rect, string caption, Color color, Color textColor, int size = 17)
         { actions[id] = rect; var image = Box(parent, id, rect, color); Label(image.transform, "Label", new Rect(0, 0, rect.width, rect.height), caption, size, textColor); return image; }
         static RectTransform Node(Transform parent, string name, Rect rect)

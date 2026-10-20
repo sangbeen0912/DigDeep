@@ -9,6 +9,7 @@ namespace DigDeep
         Image[] shade = new Image[4], edge = new Image[4], destinationEdge = new Image[4];
         Text title, explanation;
         readonly Rect[] outside = new Rect[4];
+        public Rect FocusBounds { get; private set; }
         public void Initialize(GameManager owner, RectTransform parent)
         {
             game = owner;
@@ -35,7 +36,7 @@ namespace DigDeep
             switch (prompt)
             {
                 case TutorialPrompt.Dig:
-                    focus = new Rect(125, 530, 230, 64); caption = "첫 채굴 시작";
+                    focus = game.View.ButtonBounds("play"); caption = "첫 채굴 시작";
                     text = game.Session.Tutorial.controlsStep == 0 ? "Dig!! 버튼을 눌러 채굴을 시작하세요." : "Dig!!를 눌러 남은 조작 안내를 이어가세요."; break;
                 case TutorialPrompt.Tap:
                     dim = false; caption = "조작 안내 1/3 · 탭";
@@ -47,23 +48,24 @@ namespace DigDeep
                     dim = false; caption = "조작 안내 3/3 · 홀드";
                     text = "길게 누르면 연속으로 캡니다.\n두 번 이상 캐고 손을 떼서 멈춰보세요."; break;
                 case TutorialPrompt.Restart:
-                    focus = new Rect(85, 504, 310, 57); caption = "채굴 종료";
+                    focus = game.View.ButtonBounds("restart"); caption = "채굴 종료";
                     text = "다시 준비를 누르면 곡괭이가 회복됩니다.\n다음 안내를 이어서 진행할 수 있어요."; break;
                 case TutorialPrompt.Inventory:
-                    caption = "화면 안내 1/3 · 인벤"; focus = game.Modal == GameModal.None ? new Rect(324, 118, 64, 50) : new Rect(55, 686, 370, 34);
+                    caption = "화면 안내 1/3 · 인벤"; focus = game.Modal == GameModal.None ? game.View.ButtonBounds("inventory") : new Rect(55, 686, 370, 34);
                     text = game.Modal == GameModal.None ? "인벤 버튼을 눌러 보관한 광물을 확인하세요." : "채굴한 광물이 이곳에 보관됩니다.\n뒤로가기를 누르면 다음 안내로 이동합니다."; break;
                 case TutorialPrompt.Shop:
-                    caption = "화면 안내 2/3 · 상점"; focus = game.Modal == GameModal.None ? new Rect(252, 118, 64, 50) : new Rect(55, 686, 370, 34);
+                    caption = "화면 안내 2/3 · 상점"; focus = game.Modal == GameModal.None ? game.View.ButtonBounds("shop") : new Rect(55, 686, 370, 34);
                     text = game.Modal == GameModal.None ? "상점 버튼을 눌러보세요." : "곡괭이는 구매 탭, 광물은 판매 탭을 이용해요.\n확인했으면 뒤로가기를 누르세요."; break;
                 case TutorialPrompt.Upgrade:
-                    caption = "화면 안내 3/3 · 강화";
-                    focus = game.Modal == GameModal.None ? new Rect(396, 118, 64, 50) : game.Modal == GameModal.Upgrade ? new Rect(55, 313, 370, 252) : new Rect(55, 686, 370, 34);
-                    text = game.Modal == GameModal.None ? "강화 버튼을 눌러보세요." : game.Modal == GameModal.Upgrade ? "곡괭이를 선택해 필요한 돈과 광물을 확인하세요." : "표시된 돈과 광물이 있어야 강화할 수 있어요.\n부족해도 뒤로가기로 안내를 완료할 수 있어요."; break;
+                    caption = "화면 안내 3/3 · 제련";
+                    focus = game.Modal == GameModal.None ? game.View.ButtonBounds("upgrade") : game.Modal == GameModal.Upgrade ? new Rect(55, 346, 370, 252) : new Rect(55, 686, 370, 34);
+                    text = game.Modal == GameModal.None ? "제련 버튼을 눌러보세요." : game.Modal == GameModal.Upgrade ? "강화 탭에서 곡괭이를 선택해 재료를 확인하세요.\n변환 탭에서는 광물로 에너지를 만들 수 있어요." : "필요 수량과 보유 수량을 비교할 수 있어요.\n뒤로가기를 눌러 안내를 완료하세요."; break;
                 case TutorialPrompt.Switch:
                     caption = "곡괭이 교체";
                     for (int i = 0; i < game.Session.Picks.Length; i++) if (game.Session.Picks[i].Remaining > 0) { focus = new Rect(20 + i * 54, 15, 49, 77); break; }
                     text = "사용 중인 곡괭이를 모두 사용했어요.\n왼쪽 위에서 다른 곡괭이를 선택하세요."; break;
             }
+            FocusBounds = focus;
             Set(bubble, panel); explanation.rectTransform.sizeDelta = new Vector2(392, panel.height - 28);
             title.text = caption; explanation.text = text;
             outside[0] = new Rect(0, 0, 480, focus.y); outside[1] = new Rect(0, focus.yMax, 480, 854 - focus.yMax);

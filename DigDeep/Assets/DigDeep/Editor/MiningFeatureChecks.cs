@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using System.IO;
 using System.Collections.Generic;
@@ -34,8 +35,8 @@ namespace DigDeep.Editor
                 run = new MiningSession(s, 0, 2); run.Start(); for (int i = 0; i < 8; i++) run.Strike();
                 int durability = run.Picks[0].Remaining;
                 Check(!run.Drop(new Vector2Int(2, 1)), "six-row movement rejected");
-                Check(run.Drop(new Vector2Int(2, 2)), "up five through empty cells");
-                Check(run.Drop(new Vector2Int(2, 7)) && run.Picks[0].Remaining == durability, "down five through empty cells is free");
+                Check(run.Drop(new Vector2Int(2, 5)), "up two through empty cells");
+                Check(run.Drop(new Vector2Int(2, 7)) && run.Picks[0].Remaining == durability, "down two through empty cells is free");
                 Check(!run.Drop(new Vector2Int(0, 7)), "solid intermediate columns block crossing");
                 Check(run.Drop(new Vector2Int(2, 8)), "downward solid destination accepted"); run.Strike();
                 Check(run.Position == new Vector2Int(2, 8), "downward destination mined");
@@ -94,7 +95,7 @@ namespace DigDeep.Editor
                 Check(!ProgressData.TryParse("{\"version\":2,\"money\":0,\"coal\":-1,\"picks\":[{\"id\":\"WOOD\"}]}", out _), "negative inventory rejected");
                 Check(!ProgressData.TryParse("{\"version\":9,\"money\":0,\"picks\":[{\"id\":\"WOOD\"}]}", out _), "unknown schema rejected");
                 Check(ProgressData.TryParse("{\"version\":2,\"coal\":3,\"iron\":0,\"picks\":[{\"id\":\"WOOD\"}]}", out var migrated)
-                    && migrated.version == 5 && migrated.discovered.Contains("Coal") && !migrated.discovered.Contains("Iron"), "legacy inventory confirms only owned ores");
+                    && migrated.version == 7 && migrated.discovered.Contains("Coal") && !migrated.discovered.Contains("Iron"), "legacy inventory confirms only owned ores");
                 Check(!ProgressData.TryParse("{\"version\":3,\"discovered\":[\"InvalidOre\"],\"picks\":[{\"id\":\"WOOD\"}]}", out _), "invalid confirmation record rejected");
                 SpawnRules(s);
                 Debug.Log("DIGDEEP_MINING_RULES_PASSED " + checks);
@@ -232,8 +233,9 @@ namespace DigDeep.Editor
                 game.HandleAction("upgrade"); game.HandleAction("upgrade-pick0"); game.HandleAction("upgrade-confirm");
                 game.HandleAction("upgrade-pick0"); Capture(game, "14-iron-upgrade-ready");
                 Check(game.View.ActionAt(new Vector2(240, 590)) == "upgrade-confirm", "iron confirm enables only with money and both ores");
-                var requirements = game.GetComponentInChildren<Canvas>().transform.Find("Portrait 480x854/Trading and confirmation/Confirmation content/Requirements").GetComponent<UnityEngine.UI.Text>().text;
-                Check(requirements.Contains("석탄 14개") && requirements.Contains("철광석 7개"), "iron confirmation shows both required ores");
+                var rows = game.View.UiRoot.Find("Trading and confirmation/Confirmation content/Readable requirements");
+                var requirements = string.Join(" ", rows.GetComponentsInChildren<UnityEngine.UI.Text>().Select(t => t.text));
+                Check(requirements.Contains("석탄") && requirements.Contains("14개") && requirements.Contains("철광석") && requirements.Contains("7개"), "iron confirmation shows both required ores");
                 game.HandleAction("upgrade-confirm"); var saved = store.Load(settings);
                 Check(game.Session.Picks[0].Name == "IRON" && saved.money == 750 && saved.coal == 0 && saved.iron == 0 && saved.picks[0].id == "IRON", "successful iron upgrade saves all deductions together");
                 UnityEngine.Object.DestroyImmediate(instance); instance = null;

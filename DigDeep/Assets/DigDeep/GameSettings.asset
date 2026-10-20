@@ -17,7 +17,10 @@ MonoBehaviour:
   coalHealth: 5
   ironOreHealth: 15
   goldOreHealth: 15
+  diamondOreHealth: 30
+  oilHealth: 30
   goldSellPrice: 40
+  oilSellPrice: 60
   spawnLines:
   - name: "1\uB77C\uC778"
     firstRow: 2
@@ -25,6 +28,8 @@ MonoBehaviour:
     coalPercent: 5
     ironPercent: 0
     goldPercent: 0
+    diamondPercent: 0
+    oilPercent: 0
     guaranteeOne: 1
   - name: "2\uB77C\uC778"
     firstRow: 11
@@ -32,6 +37,8 @@ MonoBehaviour:
     coalPercent: 5
     ironPercent: 5
     goldPercent: 0
+    diamondPercent: 0
+    oilPercent: 0
     guaranteeOne: 1
   - name: "3\uB77C\uC778"
     firstRow: 26
@@ -39,15 +46,28 @@ MonoBehaviour:
     coalPercent: 1
     ironPercent: 7
     goldPercent: 0.8
+    diamondPercent: 0
+    oilPercent: 0
+    guaranteeOne: 1
+  - name: "4\uB77C\uC778"
+    firstRow: 46
+    lastRow: 65
+    coalPercent: 1
+    ironPercent: 10
+    goldPercent: 2
+    diamondPercent: 0.5
+    oilPercent: 0.1
     guaranteeOne: 1
   woodPower: 1
   stonePower: 1
   ironPower: 2
   alloyPower: 2.5
+  diamondPower: 3
   woodDurability: 20
   stoneDurability: 30
   ironDurability: 50
   alloyDurability: 80
+  diamondDurability: 110
   purchasePrices: 64000000e803000010270000
   stoneUpgradeCost: 50
   ironUpgradeCost: 200
@@ -58,6 +78,12 @@ MonoBehaviour:
   alloyUpgradeCoal: 30
   alloyUpgradeIron: 10
   alloyUpgradeGold: 5
+  diamondUpgradeCost: 500
+  diamondUpgradeOre: 20
+  diamondUpgradeEnergyTenths: 50
+  conversionRecipes:
+  - mineral: 1
+    energyTenthsPerOre: 1
   holdDelay: 0.28
   strikeInterval: 0.34
   dragThreshold: 10

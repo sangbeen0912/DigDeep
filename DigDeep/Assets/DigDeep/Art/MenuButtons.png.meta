@@ -1,0 +1,304 @@
+fileFormatVersion: 2
+guid: a267351aa4f5cfb46b7a7ccba61e5e49
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -4331849829665928538
+    second: MenuButtons_0
+  - first:
+      213: -3172522754301639175
+    second: MenuButtons_1
+  - first:
+      213: 9060215553278879933
+    second: MenuButtons_2
+  - first:
+      213: -3341821493477967250
+    second: MenuButtons_3
+  - first:
+      213: 6477783469407055815
+    second: MenuButtons_4
+  - first:
+      213: 5219332785165633450
+    second: MenuButtons_5
+  - first:
+      213: -8702864752180086577
+    second: MenuButtons_6
+  - first:
+      213: -2211250369830623015
+    second: MenuButtons_7
+  - first:
+      213: -6295630453502831959
+    second: MenuButtons_8
+  - first:
+      213: -3518396900744409384
+    second: MenuButtons_9
+  - first:
+      213: 705637749053542586
+    second: MenuButtons_10
+  - first:
+      213: 2907944615588443035
+    second: MenuButtons_11
+  - first:
+      213: -1635576643417700177
+    second: MenuButtons_12
+  - first:
+      213: 498396694489549519
+    second: MenuButtons_13
+  - first:
+      213: 1427497230287804714
+    second: MenuButtons_14
+  - first:
+      213: 9168709475721047036
+    second: MenuButtons_15
+  - first:
+      213: 3136617198058898868
+    second: MenuButtons_16
+  - first:
+      213: 819995008993826366
+    second: MenuButtons_17
+  - first:
+      213: 4013966903519363102
+    second: MenuButtons_18
+  - first:
+      213: -5686446360072860731
+    second: MenuButtons_19
+  - first:
+      213: -1188478622093271837
+    second: MenuButtons_20
+  - first:
+      213: 4182850932228497918
+    second: MenuButtons_21
+  - first:
+      213: 7920595361604151052
+    second: MenuButtons_22
+  - first:
+      213: -5244391910614919940
+    second: MenuButtons_23
+  - first:
+      213: -7111994815228961035
+    second: MenuButtons_24
+  - first:
+      213: 7716312598895144577
+    second: MenuButtons_25
+  - first:
+      213: 2086365883693779916
+    second: MenuButtons_26
+  - first:
+      213: 2377563179090249744
+    second: MenuButtons_27
+  - first:
+      213: -7846304388243141426
+    second: MenuButtons_28
+  - first:
+      213: 8426994210561262244
+    second: MenuButtons_29
+  - first:
+      213: -3679762569388272970
+    second: MenuButtons_30
+  - first:
+      213: -8194091764845845474
+    second: MenuButtons_31
+  - first:
+      213: 2327184554509712967
+    second: MenuButtons_32
+  - first:
+      213: 779564276489566907
+    second: MenuButtons_33
+  - first:
+      213: -2701716990254920462
+    second: MenuButtons_34
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 1024
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: ShopButton
+      rect:
+        serializedVersion: 2
+        x: 132
+        y: 226
+        width: 574
+        height: 285
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 210.90001, y: 28.5, z: 28.5, w: 28.5}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d9819e6c6b0ef6f42817e0f57f7033ef
+      internalID: -1967246598
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: InventoryButton
+      rect:
+        serializedVersion: 2
+        x: 798
+        y: 226
+        width: 577
+        height: 285
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 210.90001, y: 28.5, z: 28.5, w: 28.5}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d3be49948b7eeb640bf662c89f3aba23
+      internalID: 1914455680
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UpgradeButton
+      rect:
+        serializedVersion: 2
+        x: 1467
+        y: 226
+        width: 573
+        height: 285
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 210.90001, y: 28.5, z: 28.5, w: 28.5}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cfdcb8f9cc428e743a65be5aa46a9514
+      internalID: 1069901709
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 0f08f197b97c1374393ab0c445edc10f
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      InventoryButton: 1914455680
+      ShopButton: -1967246598
+      UpgradeButton: 1069901709
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

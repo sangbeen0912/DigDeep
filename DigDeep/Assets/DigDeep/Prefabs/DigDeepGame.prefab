@@ -1,5 +1,53 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2451448902419436656
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5625426700930978155}
+  - component: {fileID: 1346113388244730895}
+  m_Layer: 0
+  m_Name: PresentationTools
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5625426700930978155
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2451448902419436656}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6681187384812444713}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1346113388244730895
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2451448902419436656}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 526a7d807a50b2048a1fbc20c2e11db4, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::DigDeep.Presentation.PresentationResourcesButton
+  money: 20000
+  coal: 200
+  iron: 100
+  gold: 30
 --- !u!1 &7586289421317910758
 GameObject:
   m_ObjectHideFlags: 0
@@ -29,7 +77,8 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 5625426700930978155}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &8885782632649181621
@@ -54,4 +103,11 @@ MonoBehaviour:
   coalOre: {fileID: -2044532295, guid: 9b7b26b5335d37749b23b48fdc7fe01a, type: 3}
   ironOre: {fileID: -583251808, guid: 9b7b26b5335d37749b23b48fdc7fe01a, type: 3}
   goldOre: {fileID: -71368949, guid: 9b7b26b5335d37749b23b48fdc7fe01a, type: 3}
+  shopSkin: {fileID: -1967246598, guid: a267351aa4f5cfb46b7a7ccba61e5e49, type: 3}
+  inventorySkin: {fileID: 1914455680, guid: a267351aa4f5cfb46b7a7ccba61e5e49, type: 3}
+  upgradeSkin: {fileID: 1069901709, guid: a267351aa4f5cfb46b7a7ccba61e5e49, type: 3}
+  digSkin: {fileID: -1167554472, guid: d28e0fdaf3d9f5949b83704e0df0025f, type: 3}
+  diamondPick: {fileID: -1154699700, guid: 5029c43ed0027cf48ad9bc5270ac13c9, type: 3}
+  diamondOre: {fileID: 1350501120, guid: 4a05ce9a3171d8848b1493a68b62bca1, type: 3}
+  energyConverter: {fileID: -140845772, guid: e64ee7f6883cfe440a8652a943a93ea1, type: 3}
   font: {fileID: 12800000, guid: 995492bfe62ca8149a3bc1e6ea771ebe, type: 3}

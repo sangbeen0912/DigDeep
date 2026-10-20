@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -29,6 +30,11 @@ namespace DigDeep
         readonly List<Chip> chips = new List<Chip>();
         readonly List<Image> routeMarkers = new List<Image>();
         readonly Dictionary<string, Rect> actions = new Dictionary<string, Rect>();
+        readonly Dictionary<string, Image> buttons = new Dictionary<string, Image>();
+        sealed class OptionalButton { public RectTransform Target; public Func<bool> Available; public Action Execute; }
+        readonly Dictionary<string, OptionalButton> optionalButtons = new Dictionary<string, OptionalButton>();
+        readonly Vector3[] boundCorners = new Vector3[4];
+        public RectTransform UiRoot => root;
         Font font;
         bool dragging;
         Vector2 dragPoint;
@@ -108,30 +114,32 @@ namespace DigDeep
             }
             Label(root, "Wallet caption", new Rect(295, 22, 160, 17), "보유 금액", 12, new Color32(151, 167, 175, 255), TextAnchor.MiddleRight);
             money = Label(root, "Wallet", new Rect(255, 42, 200, 32), "0 G", 25, gold, TextAnchor.MiddleRight);
-            depth = Label(root, "Depth", new Rect(300, 82, 154, 15), "", 10, new Color32(151, 167, 175, 255), TextAnchor.MiddleRight);
+            depth = Label(root, "Depth", new Rect(285, 80, 169, 31), "", 10, new Color32(151, 167, 175, 255), TextAnchor.MiddleRight);
             Box(root, "Footer", new Rect(0, Height - 42, Width, 42), dark);
             status = Label(root, "Instructions", new Rect(15, Height - 39, 325, 34), "", 10, new Color32(180, 203, 210, 255), TextAnchor.MiddleLeft);
             regroupButton = Button(root, "재정비", new Rect(20, 118, 208, 50), new Color32(47, 69, 76, 255), Color.white);
-            shopButton = Button(root, "상점", new Rect(252, 118, 64, 50), new Color32(47, 69, 76, 255), Color.white);
-            inventoryButton = Button(root, "인벤", new Rect(324, 118, 64, 50), new Color32(47, 69, 76, 255), Color.white);
-            upgradeButton = Button(root, "강화", new Rect(396, 118, 64, 50), new Color32(47, 69, 76, 255), Color.white);
+            shopButton = SkinnedButton("shop", "상점", GameUILayout.Shop, game.shopSkin);
+            inventoryButton = SkinnedButton("inventory", "인벤", GameUILayout.Inventory, game.inventorySkin);
+            upgradeButton = SkinnedButton("upgrade", "제련", GameUILayout.Upgrade, game.upgradeSkin);
             resetButton = Button(root, "데이터 초기화", new Rect(354, 814, 112, 34), new Color32(62, 39, 42, 255), new Color32(241, 163, 151, 255), 11);
-            readyButton = Button(root, "Dig!!", new Rect(125, 530, 230, 64), gold, dark, 30);
+            readyButton = SkinnedButton("play", "Dig!!", GameUILayout.Dig, game.digSkin, true);
+            buttons["regroup"] = regroupButton; buttons["reset"] = resetButton;
             readyHint = Label(root, "Start hint", new Rect(70, 607, 340, 25), "Dig!!를 눌러 채굴 시작", 14, Color.white, TextAnchor.MiddleCenter);
             overlay = RectNode(root, "Session panel", new Rect(40, 345, 400, 280));
             Box(overlay, "Panel shadow", new Rect(5, 7, 400, 280), new Color(0, 0, 0, .35f));
             Box(overlay, "Panel", new Rect(0, 0, 400, 280), new Color32(20, 34, 41, 249));
             Box(overlay, "Accent", new Rect(0, 0, 400, 3), gold);
             title = Label(overlay, "Title", new Rect(20, 24, 360, 47), "DIG DEEP", 34, gold, TextAnchor.MiddleCenter);
-            detail = Label(overlay, "Description", new Rect(25, 77, 350, 63), "", 15, Color.white, TextAnchor.MiddleCenter);
+            detail = Label(overlay, "Description", new Rect(25, 75, 350, 82), "", 22, Color.white, TextAnchor.MiddleCenter);
             var button = Box(overlay, "Play or restart", new Rect(45, 159, 310, 57), gold);
+            buttons["restart"] = button;
             mainLabel = Label(button.transform, "Label", new Rect(0, 0, 310, 57), "다시 준비", 24, dark, TextAnchor.MiddleCenter);
             menus = gameObject.AddComponent<GameMenus>(); menus.Initialize(game, root);
             noticePanel = Box(root, "Mining notice panel", new Rect(35, 190, 410, 45), new Color32(20, 30, 38, 235));
             notice = Label(noticePanel.transform, "Mining notice", new Rect(6, 0, 398, 45), "", 16, Color.white, TextAnchor.MiddleCenter);
             noticePanel.gameObject.SetActive(false);
             tutorialView = gameObject.AddComponent<TutorialView>(); tutorialView.Initialize(game, root);
-            game.Session.Impact += OnImpact;
+            game.Session.Impact += OnImpact; game.Session.RecordBroken += OnRecordBroken;
             Layout();
         }
 
@@ -167,7 +175,7 @@ namespace DigDeep
                 if (!dragging && cell == impactCell && impactAge < .13f) tile.Rect.anchoredPosition += new Vector2(Mathf.Sin(impactAge * 90) * 2, 0);
                 tile.Image.sprite = game.BlockSprite(session.Kind(cell), row);
                 float shade = Mathf.Clamp(1 - row * .005f, .66f, 1);
-                tile.Image.color = new Color(shade, shade, shade);
+                tile.Image.color = session.Kind(cell) == Mineral.Oil ? Color.black : new Color(shade, shade, shade);
                 int maximum = session.MaximumHealth(cell);
                 bool damaged = hp < maximum;
                 for (int j = 0; j < 3; j++) tile.Cracks[j].gameObject.SetActive(damaged && hp <= maximum * (1 - j * .25f));
@@ -201,7 +209,7 @@ namespace DigDeep
                 durability[i].color = pick.Remaining == 0 ? new Color32(224, 124, 109, 255) : Color.white;
             }
             money.text = session.Money.ToString("N0") + "원";
-            depth.text = "최대 깊이  " + session.Deepest;
+            depth.text = "이번 판 " + session.Deepest + "행\n최고 기록 " + session.BestDepth + "행";
             bool playing = session.State == SessionState.Playing;
             bool ready = session.State == SessionState.Ready;
             overlay.gameObject.SetActive(session.State == SessionState.GameOver);
@@ -210,17 +218,21 @@ namespace DigDeep
             shopButton.gameObject.SetActive(!playing); upgradeButton.gameObject.SetActive(!playing); inventoryButton.gameObject.SetActive(!playing);
             resetButton.gameObject.SetActive(!playing);
             title.text = "채굴 종료";
-            detail.text = "돌 수입 +" + session.RunIncome + "원 · 석탄 " + session.RunCoal + "개\n철 " + session.RunIron + "개 · 금 " + session.RunGold + "개\n곡괭이를 회복하고 다시 도전하세요";
+            if (session.State == SessionState.GameOver) detail.text = session.ResultSummary();
             mainLabel.text = "다시 준비"; mainLabel.fontSize = 20;
             status.text = playing
-                ? (!session.CanMine ? "소진 · 왼쪽 위에서 곡괭이를 선택하세요" : dragging ? "상하좌우 · 시작 위치에서 5칸" : "탭 · 길게 누르기 · 곡괭이 드래그")
+                ? (!session.CanMine ? "소진 · 왼쪽 위에서 곡괭이를 선택하세요" : dragging ? "시작 위치 기준 상하 2칸 · 좌우 이동" : "탭 · 길게 누르기 · 곡괭이 드래그")
                 : "성장 정보 자동 저장 · 가로 5칸";
             if (!string.IsNullOrEmpty(game.SaveWarning)) status.text = game.SaveWarning;
+            foreach (var optional in optionalButtons.Values)
+                if (optional.Target != null) optional.Target.gameObject.SetActive(optional.Available());
             menus.Refresh();
             tutorialView.Refresh();
             UpdateParticles();
             UpdateFeedback();
         }
+
+        public void OnRecordBroken(int row) => ShowNotice("최고 깊이 갱신! " + row + "행", false);
 
         public void OnImpact(Vector2Int cell, float damage, bool broken)
         {
@@ -256,7 +268,7 @@ namespace DigDeep
                 var color = chip.Tint; color.a = 1 - elapsed / .45f; chip.Image.color = color;
             }
         }
-        public static Color OreColor(Mineral kind) => kind == Mineral.Coal ? new Color32(43, 47, 52, 255) : kind == Mineral.Iron ? new Color32(196, 137, 92, 255) : kind == Mineral.Gold ? new Color32(240, 193, 40, 255) : new Color32(157, 153, 141, 255);
+        public static Color OreColor(Mineral kind) => kind == Mineral.Oil ? Color.black : kind == Mineral.Diamond ? new Color32(39, 221, 235, 255) : kind == Mineral.Coal ? new Color32(43, 47, 52, 255) : kind == Mineral.Iron ? new Color32(196, 137, 92, 255) : kind == Mineral.Gold ? new Color32(240, 193, 40, 255) : new Color32(157, 153, 141, 255);
         public void ShowNotice(string message, bool error = true)
         {
             if (notice.text == message && Time.unscaledTime < noticeUntil - .7f) return;
@@ -305,6 +317,9 @@ namespace DigDeep
         public Rect CellBounds(Vector2Int cell) => new Rect(Left + cell.x * Pitch, Surface + cell.y * Pitch - scroll, Pitch, Pitch);
         public string ActionAt(Vector2 point)
         {
+            if (game.Modal == GameModal.None)
+                foreach (var optional in optionalButtons)
+                    if (optional.Value.Target != null && optional.Value.Available() && RootBounds(optional.Value.Target).Contains(point)) return optional.Key;
             if (tutorialView.BlocksPoint(point)) return "blocked";
             var action = BaseActionAt(point);
             return action == null || game.Tutorial.AllowsAction(action) ? action : "blocked";
@@ -313,19 +328,40 @@ namespace DigDeep
         {
             if (game.Modal != GameModal.None) return menus.ActionAt(point);
             var state = game.Session.State;
-            if (state == SessionState.Ready && new Rect(125, 530, 230, 64).Contains(point)) return "play";
-            if (state == SessionState.GameOver && new Rect(85, 504, 310, 57).Contains(point)) return "restart";
+            if (state == SessionState.Ready && ButtonBounds("play").Contains(point)) return "play";
+            if (state == SessionState.GameOver && ButtonBounds("restart").Contains(point)) return "restart";
             if (state != SessionState.Playing)
             {
-                if (new Rect(252, 118, 64, 50).Contains(point)) return "shop";
-                if (new Rect(324, 118, 64, 50).Contains(point)) return "inventory";
-                if (new Rect(396, 118, 64, 50).Contains(point)) return "upgrade";
-                if (new Rect(354, 814, 112, 34).Contains(point)) return "reset";
+                if (ButtonBounds("shop").Contains(point)) return "shop";
+                if (ButtonBounds("inventory").Contains(point)) return "inventory";
+                if (ButtonBounds("upgrade").Contains(point)) return "upgrade";
+                if (ButtonBounds("reset").Contains(point)) return "reset";
             }
-            else if (new Rect(20, 118, 208, 50).Contains(point)) return "regroup";
+            else if (ButtonBounds("regroup").Contains(point)) return "regroup";
             foreach (var pair in actions) if (pair.Value.Contains(point)) return pair.Key;
             if (!InField(point) || state != SessionState.Playing) return "blocked";
             return null;
+        }
+
+        public Rect ButtonBounds(string action) => buttons.TryGetValue(action, out var button) && button != null ? RootBounds(button.rectTransform) : new Rect();
+        public Rect RootBounds(RectTransform target)
+        {
+            target.GetWorldCorners(boundCorners);
+            Vector3 topLeft = root.InverseTransformPoint(boundCorners[1]), bottomRight = root.InverseTransformPoint(boundCorners[3]);
+            return new Rect(topLeft.x + Width * .5f, Height * .5f - topLeft.y, bottomRight.x - topLeft.x, topLeft.y - bottomRight.y);
+        }
+        public void RegisterOptionalButton(string id, RectTransform target, Func<bool> available, Action execute)
+            => optionalButtons[id] = new OptionalButton { Target = target, Available = available, Execute = execute };
+        public void UnregisterOptionalButton(string id)
+        {
+            if (optionalButtons.TryGetValue(id, out var optional) && optional.Target != null) optional.Target.gameObject.SetActive(false);
+            optionalButtons.Remove(id);
+        }
+        public bool TryOptionalAction(string id)
+        {
+            if (!optionalButtons.TryGetValue(id, out var optional)) return false;
+            if (optional.Target != null && optional.Available()) optional.Execute();
+            return true;
         }
 
         public void SetDrag(Vector2 point)
@@ -370,6 +406,22 @@ namespace DigDeep
         {
             var image = RectNode(parent, name, rect).gameObject.AddComponent<Image>();
             image.color = color; image.sprite = sprite; image.raycastTarget = false; return image;
+        }
+        Image SkinnedButton(string id, string caption, Rect rect, Sprite sprite, bool primary = false)
+        {
+            var button = Box(root, caption, rect, sprite != null ? Color.white : primary ? gold : new Color32(47, 69, 76, 255), sprite);
+            if (sprite != null)
+            {
+                button.type = Image.Type.Sliced;
+                // Unity also scales sprite PPU when limiting texture resolution.
+                // Keep the fixed borders and icons at their intended on-screen size.
+                button.pixelsPerUnitMultiplier = sprite.rect.height / rect.height * 100f / sprite.pixelsPerUnit;
+            }
+            float inset = sprite != null ? (primary ? 54 : 37) : 0;
+            var text = Label(button.transform, "Label", new Rect(inset, 0, rect.width - inset - (sprite != null ? 5 : 0), rect.height), caption, primary ? 30 : 16, primary ? dark : Color.white, TextAnchor.MiddleCenter);
+            text.fontStyle = FontStyle.Bold;
+            if (primary && sprite != null) TiltPickIcon(Box(button.transform, "Dig pickaxe", new Rect(14, 12, 40, 40), Color.white, game.wood));
+            buttons[id] = button; return button;
         }
         Image Button(Transform parent, string caption, Rect rect, Color color, Color textColor, int size = 16)
         {

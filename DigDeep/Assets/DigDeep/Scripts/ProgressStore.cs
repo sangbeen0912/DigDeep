@@ -6,7 +6,7 @@ namespace DigDeep
     [Serializable] public sealed class PickProgress { public string id; public float power; public int maximum, upgrade; }
     [Serializable] public sealed class ProgressData
     {
-        public int version = 5, money, coal, iron, gold;
+        public int version = 7, money, coal, iron, gold, diamond, oil, energyTenths, bestDepth;
         public TutorialProgress tutorial = new TutorialProgress();
         public List<string> discovered = new List<string>();
         public List<PickProgress> picks = new List<PickProgress>();
@@ -18,10 +18,10 @@ namespace DigDeep
             data = null;
             if (string.IsNullOrEmpty(json) || !json.Contains("\"version\"")) return false;
             try { data = JsonUtility.FromJson<ProgressData>(json); } catch { return false; }
-            if (data == null || data.version < 1 || data.version > 5 || data.money < 0 || data.coal < 0 || data.iron < 0 || data.gold < 0 ||
+            if (data == null || data.version < 1 || data.version > 7 || data.money < 0 || data.coal < 0 || data.iron < 0 || data.gold < 0 || data.diamond < 0 || data.oil < 0 || data.energyTenths < 0 || data.bestDepth < 0 ||
                 data.picks == null || data.picks.Count < 1 || data.picks.Count > GameSettings.MaximumPicks) return false;
             foreach (var p in data.picks)
-                if (p == null || (p.id != "WOOD" && p.id != "STONE" && p.id != "IRON" && p.id != "ALLOY") || p.upgrade < 0) return false;
+                if (p == null || (p.id != "WOOD" && p.id != "STONE" && p.id != "IRON" && p.id != "ALLOY" && p.id != "DIAMOND") || p.upgrade < 0) return false;
             // Duplicate WOOD entries represent distinct owned pickaxes.
             if (data.discovered == null) data.discovered = new List<string>();
             foreach (var id in data.discovered) if (OreCatalog.FromId(id) == null) return false;
@@ -29,9 +29,11 @@ namespace DigDeep
             if (data.coal > 0 && !data.discovered.Contains("Coal")) data.discovered.Add("Coal");
             if (data.iron > 0 && !data.discovered.Contains("Iron")) data.discovered.Add("Iron");
             if (data.gold > 0 && !data.discovered.Contains("Gold")) data.discovered.Add("Gold");
+            if (data.diamond > 0 && !data.discovered.Contains("Diamond")) data.discovered.Add("Diamond");
+            if (data.oil > 0 && !data.discovered.Contains("Oil")) data.discovered.Add("Oil");
             if (data.tutorial == null) data.tutorial = new TutorialProgress();
             if (!data.tutorial.Valid) return false;
-            data.version = 5; return true;
+            data.version = 7; return true;
         }
     }
     public sealed class ProgressStore

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 namespace DigDeep
 {
-    public enum Mineral { Stone, Coal, Iron, Gold }
+    public enum Mineral { Stone, Coal, Iron, Gold, Diamond, Oil }
     // Generate each entire depth band once. Viewing a cell never rerolls it.
     public sealed class OreSpawnManager
     {
@@ -35,23 +35,29 @@ namespace DigDeep
                 bool coal = random.NextDouble() * 100 < line.coalPercent;
                 bool iron = random.NextDouble() * 100 < line.ironPercent;
                 bool gold = random.NextDouble() * 100 < line.goldPercent;
-                map[y, x] = Choose(coal, iron, gold, random);
+                bool diamond = random.NextDouble() * 100 < line.diamondPercent;
+                bool oil = random.NextDouble() * 100 < line.oilPercent;
+                map[y, x] = Choose(coal, iron, gold, diamond, oil, random);
                 found |= map[y, x] != Mineral.Stone;
             }
-            if (!found && line.guaranteeOne && (line.coalPercent > 0 || line.ironPercent > 0 || line.goldPercent > 0))
-                map[random.Next(rows), random.Next(GameSettings.Columns)] = Choose(line.coalPercent > 0, line.ironPercent > 0, line.goldPercent > 0, random);
+            if (!found && line.guaranteeOne && (line.coalPercent > 0 || line.ironPercent > 0 || line.goldPercent > 0 || line.diamondPercent > 0 || line.oilPercent > 0))
+                map[random.Next(rows), random.Next(GameSettings.Columns)] = Choose(line.coalPercent > 0, line.ironPercent > 0, line.goldPercent > 0, line.diamondPercent > 0, line.oilPercent > 0, random);
             return map;
         }
         public static Mineral Choose(bool coal, bool iron, System.Random random)
             => Choose(coal, iron, false, random);
         public static Mineral Choose(bool coal, bool iron, bool gold, System.Random random)
+            => Choose(coal, iron, gold, false, false, random);
+        public static Mineral Choose(bool coal, bool iron, bool gold, bool diamond, bool oil, System.Random random)
         {
-            int count = (coal ? 1 : 0) + (iron ? 1 : 0) + (gold ? 1 : 0);
+            int count = (coal ? 1 : 0) + (iron ? 1 : 0) + (gold ? 1 : 0) + (diamond ? 1 : 0) + (oil ? 1 : 0);
             if (count == 0) return Mineral.Stone;
             int selected = random.Next(count);
             if (coal && selected-- == 0) return Mineral.Coal;
             if (iron && selected-- == 0) return Mineral.Iron;
-            return Mineral.Gold;
+            if (gold && selected-- == 0) return Mineral.Gold;
+            if (diamond && selected-- == 0) return Mineral.Diamond;
+            return Mineral.Oil;
         }
     }
 }

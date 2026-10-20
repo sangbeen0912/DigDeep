@@ -25,11 +25,17 @@ namespace DigDeep
         public int Coal { get; private set; }
         public int Iron { get; private set; }
         public int Gold { get; private set; }
+        public int Diamond { get; private set; }
+        public int Oil { get; private set; }
+        public int EnergyTenths { get; private set; }
         public int RunIncome { get; private set; }
         public int RunCoal { get; private set; }
         public int RunIron { get; private set; }
         public int RunGold { get; private set; }
+        public int RunDiamond { get; private set; }
+        public int RunOil { get; private set; }
         public int Deepest { get; private set; }
+        public int BestDepth { get; private set; }
         public TutorialProgress Tutorial { get; }
         public DropFailure LastDropFailure { get; private set; }
         public int HealthMaximum => Math.Max(1, settings.blockHealth);
@@ -37,7 +43,8 @@ namespace DigDeep
         public bool CanTrade => State != SessionState.Playing;
         public event Action Changed, GrowthChanged;
         public event Action<Vector2Int, float, bool> Impact;
-        public event Action<int> MoneyChanged;
+        public event Action<int> MoneyChanged, RecordBroken;
+        bool recordCelebrated;
         readonly GameSettings settings;
         OreSpawnManager ores;
         readonly Dictionary<Vector2Int, float> health = new Dictionary<Vector2Int, float>();
@@ -46,19 +53,23 @@ namespace DigDeep
         public MiningSession(GameSettings settings, ProgressData progress, int? seed = null)
         {
             this.settings = settings; Money = Math.Max(0, progress.money);
+            BestDepth = Math.Max(0, progress.bestDepth);
             Tutorial = (progress.tutorial ?? new TutorialProgress()).Copy();
             Coal = Math.Max(0, progress.coal); Iron = Math.Max(0, progress.iron); Gold = Math.Max(0, progress.gold);
+            Diamond = Math.Max(0, progress.diamond); Oil = Math.Max(0, progress.oil); EnergyTenths = Math.Max(0, progress.energyTenths);
             if (progress.discovered != null) foreach (var id in progress.discovered)
             { var entry = OreCatalog.FromId(id); if (entry != null) discovered.Add(entry.Kind); }
             if (Coal > 0) discovered.Add(Mineral.Coal);
             if (Iron > 0) discovered.Add(Mineral.Iron);
             if (Gold > 0) discovered.Add(Mineral.Gold);
+            if (Diamond > 0) discovered.Add(Mineral.Diamond);
+            if (Oil > 0) discovered.Add(Mineral.Oil);
             Picks = progress.picks.ConvertAll(p => new Pickaxe(p.id, settings.Power(p.id), settings.Durability(p.id), GameSettings.Tier(p.id))).ToArray();
             ores = new OreSpawnManager(settings, seed ?? UnityEngine.Random.Range(1, int.MaxValue));
         }
         public ProgressData Growth()
         {
-            var data = new ProgressData { money = Money, coal = Coal, iron = Iron, gold = Gold, tutorial = Tutorial.Copy() };
+            var data = new ProgressData { money = Money, coal = Coal, iron = Iron, gold = Gold, diamond = Diamond, oil = Oil, energyTenths = EnergyTenths, bestDepth = BestDepth, tutorial = Tutorial.Copy() };
             foreach (var entry in OreCatalog.All) if (discovered.Contains(entry.Kind)) data.discovered.Add(entry.Id);
             foreach (var p in Picks) data.picks.Add(new PickProgress { id = p.Name, power = p.Power, maximum = p.Maximum, upgrade = p.Upgrade });
             return data;
@@ -66,7 +77,15 @@ namespace DigDeep
         public Mineral Kind(Vector2Int cell) => ores.Kind(cell);
         public int MaximumHealth(Vector2Int cell) => settings.OreHealth(Kind(cell));
         public float Health(Vector2Int cell) => cell.y < 0 ? 0 : health.TryGetValue(cell, out float value) ? value : MaximumHealth(cell);
-        public int Stock(Mineral ore) => ore == Mineral.Coal ? Coal : ore == Mineral.Iron ? Iron : ore == Mineral.Gold ? Gold : 0;
+        public int Stock(Mineral ore) => ore == Mineral.Coal ? Coal : ore == Mineral.Iron ? Iron : ore == Mineral.Gold ? Gold : ore == Mineral.Diamond ? Diamond : ore == Mineral.Oil ? Oil : 0;
+        void ChangeStock(Mineral ore, int delta)
+        {
+            if (ore == Mineral.Coal) Coal += delta;
+            else if (ore == Mineral.Iron) Iron += delta;
+            else if (ore == Mineral.Gold) Gold += delta;
+            else if (ore == Mineral.Diamond) Diamond += delta;
+            else if (ore == Mineral.Oil) Oil += delta;
+        }
         public bool IsDiscovered(Mineral ore) => discovered.Contains(ore);
         public void Start() { if (State != SessionState.Ready) return; State = SessionState.Playing; Changed?.Invoke(); }
         public void Restart() { if (State == SessionState.GameOver) PrepareNewRun(); }
@@ -76,7 +95,8 @@ namespace DigDeep
             health.Clear(); ores = new OreSpawnManager(settings, UnityEngine.Random.Range(1, int.MaxValue));
             foreach (var p in Picks) p.Remaining = p.Maximum;
             Position = new Vector2Int(2, -1); Target = null; Selected = 0;
-            RunIncome = RunCoal = RunIron = RunGold = Deepest = 0; State = SessionState.Ready; Changed?.Invoke();
+            recordCelebrated = false;
+            RunIncome = RunCoal = RunIron = RunGold = RunDiamond = RunOil = Deepest = 0; State = SessionState.Ready; Changed?.Invoke();
         }
         public bool Select(int index)
         {
@@ -90,7 +110,7 @@ namespace DigDeep
             path = null; failure = DropFailure.None;
             if (!CanMine) { failure = DropFailure.Unavailable; return false; }
             if (destination.x < 0 || destination.x >= GameSettings.Columns || destination.y < -1) { failure = DropFailure.OutOfBounds; return false; }
-            if (Math.Abs(destination.x - Position.x) > GameSettings.ClimbLimit || Math.Abs(destination.y - Position.y) > GameSettings.ClimbLimit) { failure = DropFailure.OutOfRange; return false; }
+            if (Math.Abs(destination.x - Position.x) > GameSettings.ClimbLimit || Math.Abs(destination.y - Position.y) > GameSettings.VerticalClimbLimit) { failure = DropFailure.OutOfRange; return false; }
             var queue = new Queue<Vector2Int>(); var previous = new Dictionary<Vector2Int, Vector2Int>();
             queue.Enqueue(Position); previous[Position] = Position;
             var directions = new[] { Vector2Int.left, Vector2Int.right, Vector2Int.down, Vector2Int.up };
@@ -107,7 +127,7 @@ namespace DigDeep
                 {
                     var next = current + direction;
                     if (next.x < 0 || next.x >= GameSettings.Columns || next.y < -1 ||
-                        Math.Abs(next.x - Position.x) > GameSettings.ClimbLimit || Math.Abs(next.y - Position.y) > GameSettings.ClimbLimit ||
+                        Math.Abs(next.x - Position.x) > GameSettings.ClimbLimit || Math.Abs(next.y - Position.y) > GameSettings.VerticalClimbLimit ||
                         previous.ContainsKey(next) || (next != destination && Health(next) > 0)) continue;
                     previous[next] = current; queue.Enqueue(next);
                 }
@@ -134,16 +154,36 @@ namespace DigDeep
             if (broken)
             {
                 Position = target; Target = null; Deepest = Math.Max(Deepest, target.y + 1);
+                if (Deepest > BestDepth)
+                {
+                    BestDepth = Deepest;
+                    if (!recordCelebrated) { recordCelebrated = true; RecordBroken?.Invoke(BestDepth); }
+                }
                 var kind = Kind(target);
                 if (OreCatalog.Find(kind) != null) discovered.Add(kind);
                 if (kind == Mineral.Coal) { Coal = Math.Min(int.MaxValue - 1, Coal) + 1; RunCoal++; }
                 else if (kind == Mineral.Iron) { Iron = Math.Min(int.MaxValue - 1, Iron) + 1; RunIron++; }
                 else if (kind == Mineral.Gold) { Gold = Math.Min(int.MaxValue - 1, Gold) + 1; RunGold++; }
+                else if (kind == Mineral.Diamond) { Diamond = Math.Min(int.MaxValue - 1, Diamond) + 1; RunDiamond++; }
+                else if (kind == Mineral.Oil) { Oil = Math.Min(int.MaxValue - 1, Oil) + 1; RunOil++; }
                 else { int earned = Math.Min(Math.Max(0, settings.blockReward), int.MaxValue - Money); Money += earned; RunIncome += earned; MoneyChanged?.Invoke(Money); }
                 GrowthChanged?.Invoke();
             }
             if (Array.TrueForAll(Picks, p => p.Remaining == 0)) State = SessionState.GameOver;
             Impact?.Invoke(target, damage, broken); Changed?.Invoke(); return true;
+        }
+        public string ResultSummary() => "이번 판 도달 깊이\n" + Deepest + "행";
+        public bool GrantResources(int money, int coal, int iron, int gold)
+        {
+            if (State != SessionState.Ready || money < 0 || coal < 0 || iron < 0 || gold < 0) return false;
+            Money = (int)Math.Min(int.MaxValue, (long)Money + money);
+            Coal = (int)Math.Min(int.MaxValue, (long)Coal + coal);
+            Iron = (int)Math.Min(int.MaxValue, (long)Iron + iron);
+            Gold = (int)Math.Min(int.MaxValue, (long)Gold + gold);
+            if (coal > 0) discovered.Add(Mineral.Coal);
+            if (iron > 0) discovered.Add(Mineral.Iron);
+            if (gold > 0) discovered.Add(Mineral.Gold);
+            GrowthChanged?.Invoke(); Changed?.Invoke(); return true;
         }
         public int PurchasePrice => Picks.Length >= GameSettings.MaximumPicks ? -1 : settings.purchasePrices[Picks.Length - 1];
         public bool CanBuy => CanTrade && PurchasePrice >= 0 && Money >= PurchasePrice;
@@ -153,16 +193,18 @@ namespace DigDeep
             Money -= PurchasePrice; var list = new List<Pickaxe>(Picks) { new Pickaxe("WOOD", settings.woodPower, settings.woodDurability) };
             Picks = list.ToArray(); GrowthChanged?.Invoke(); Changed?.Invoke(); return true;
         }
-        public int UpgradeCost(int index) => index < 0 || index >= Picks.Length || GameSettings.NextPick(Picks[index].Name) == null ? -1 : Picks[index].Name == "WOOD" ? settings.stoneUpgradeCost : Picks[index].Name == "STONE" ? settings.ironUpgradeCost : settings.alloyUpgradeCost;
+        public int UpgradeCost(int index) => index < 0 || index >= Picks.Length || GameSettings.NextPick(Picks[index].Name) == null ? -1 : Picks[index].Name == "WOOD" ? settings.stoneUpgradeCost : Picks[index].Name == "STONE" ? settings.ironUpgradeCost : Picks[index].Name == "IRON" ? settings.alloyUpgradeCost : settings.diamondUpgradeCost;
         public int UpgradeOre(int index) => UpgradeCost(index) < 0 ? 0 : Picks[index].Name == "STONE" ? settings.ironUpgradeOre : Picks[index].Name == "IRON" ? settings.alloyUpgradeIron : 0;
-        public int UpgradeCoal(int index) => UpgradeCost(index) < 0 ? 0 : Picks[index].Name == "WOOD" ? settings.stoneUpgradeCoal : Picks[index].Name == "STONE" ? settings.ironUpgradeCoal : settings.alloyUpgradeCoal;
+        public int UpgradeCoal(int index) => UpgradeCost(index) < 0 ? 0 : Picks[index].Name == "WOOD" ? settings.stoneUpgradeCoal : Picks[index].Name == "STONE" ? settings.ironUpgradeCoal : Picks[index].Name == "IRON" ? settings.alloyUpgradeCoal : 0;
         public int UpgradeGold(int index) => UpgradeCost(index) >= 0 && Picks[index].Name == "IRON" ? settings.alloyUpgradeGold : 0;
-        public bool CanUpgrade(int index) => CanTrade && UpgradeCost(index) >= 0 && Money >= UpgradeCost(index) && Iron >= UpgradeOre(index) && Coal >= UpgradeCoal(index) && Gold >= UpgradeGold(index);
+        public int UpgradeDiamond(int index) => UpgradeCost(index) >= 0 && Picks[index].Name == "ALLOY" ? settings.diamondUpgradeOre : 0;
+        public int UpgradeEnergy(int index) => UpgradeCost(index) >= 0 && Picks[index].Name == "ALLOY" ? settings.diamondUpgradeEnergyTenths : 0;
+        public bool CanUpgrade(int index) => CanTrade && UpgradeCost(index) >= 0 && Money >= UpgradeCost(index) && Iron >= UpgradeOre(index) && Coal >= UpgradeCoal(index) && Gold >= UpgradeGold(index) && Diamond >= UpgradeDiamond(index) && EnergyTenths >= UpgradeEnergy(index);
         public bool UpgradePick(int index)
         {
             if (!CanUpgrade(index)) return false;
             int cost = UpgradeCost(index), ore = UpgradeOre(index), coal = UpgradeCoal(index), gold = UpgradeGold(index); string id = GameSettings.NextPick(Picks[index].Name);
-            Money -= cost; Iron -= ore; Coal -= coal; Gold -= gold;
+            Money -= cost; Iron -= ore; Coal -= coal; Gold -= gold; Diamond -= UpgradeDiamond(index); EnergyTenths -= UpgradeEnergy(index);
             Picks[index] = new Pickaxe(id, settings.Power(id), settings.Durability(id), GameSettings.Tier(id));
             GrowthChanged?.Invoke(); Changed?.Invoke(); return true;
         }
@@ -171,10 +213,23 @@ namespace DigDeep
             if (!CanSell(kind, amount)) return false;
             long earned = (long)settings.SellPrice(kind) * amount;
             if (earned > int.MaxValue - Money) return false;
-            if (kind == Mineral.Coal) Coal -= amount; else if (kind == Mineral.Iron) Iron -= amount; else Gold -= amount;
+            ChangeStock(kind, -amount);
             Money += (int)earned; GrowthChanged?.Invoke(); Changed?.Invoke(); return true;
         }
         public bool CanSell(Mineral kind, int amount) => CanTrade && OreCatalog.Find(kind) != null && IsDiscovered(kind)
             && amount > 0 && amount <= Stock(kind) && (long)settings.SellPrice(kind) * amount <= int.MaxValue - Money;
+        public int MaximumConvertible(Mineral kind)
+        {
+            int rate = settings.ConversionRate(kind);
+            return rate <= 0 || !IsDiscovered(kind) ? 0 : Math.Min(Stock(kind), (int.MaxValue - EnergyTenths) / rate);
+        }
+        public bool CanConvert(Mineral kind, int amount) => CanTrade && amount > 0 && amount <= MaximumConvertible(kind);
+        public bool Convert(Mineral kind, int amount)
+        {
+            if (!CanConvert(kind, amount)) return false;
+            int gain = settings.ConversionRate(kind) * amount;
+            ChangeStock(kind, -amount); EnergyTenths += gain;
+            GrowthChanged?.Invoke(); Changed?.Invoke(); return true;
+        }
     }
 }

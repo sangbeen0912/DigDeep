@@ -4,10 +4,13 @@ namespace DigDeep
 {
     public enum GameModal { None, Shop, Inventory, Upgrade, UpgradeConfirm, ResetWarning, ResetConfirm }
     public enum ShopPage { Buy, Sell }
+    public enum RefineryPage { Upgrade, Conversion }
     public sealed class GameManager : MonoBehaviour
     {
         public GameSettings settings;
         public Sprite stone, grass, wood, stonePick, iron, alloy, coalOre, ironOre, goldOre;
+        public Sprite shopSkin, inventorySkin, upgradeSkin, digSkin;
+        public Sprite diamondPick, diamondOre, energyConverter;
         public Font font;
         public MiningSession Session { get; private set; }
         public GameView View { get; private set; }
@@ -18,6 +21,10 @@ namespace DigDeep
         public ShopPage ShopTab { get; private set; } = ShopPage.Buy;
         public Mineral SaleKind { get; private set; } = Mineral.Stone;
         public int SaleQuantity { get; private set; }
+        public RefineryPage RefineryTab { get; private set; } = RefineryPage.Upgrade;
+        public Mineral ConversionKind { get; private set; } = Mineral.Coal;
+        public int ConversionQuantity { get; private set; }
+        public float LastConversionTime { get; private set; } = -10;
         public string SaveWarning => store.Warning;
         readonly ProgressStore store = new ProgressStore();
         public bool IsSwinging { get; private set; }
@@ -92,7 +99,9 @@ namespace DigDeep
         }
         public void HandleAction(string action)
         {
-            if (string.IsNullOrEmpty(action) || !Tutorial.AllowsAction(action)) return;
+            if (string.IsNullOrEmpty(action)) return;
+            if (View.TryOptionalAction(action)) return;
+            if (!Tutorial.AllowsAction(action)) return;
             if (action == "close") { var previous = Modal; CancelInput(); Modal = Modal == GameModal.UpgradeConfirm ? GameModal.Upgrade : GameModal.None; Tutorial.ActionCompleted(action, previous); return; }
             if (action == "reset-next" && Modal == GameModal.ResetWarning && Session.State != SessionState.Playing)
             { CancelInput(); Modal = GameModal.ResetConfirm; return; }
@@ -101,9 +110,9 @@ namespace DigDeep
                 CancelInput();
                 var initial = ProgressData.Initial(settings);
                 if (!store.Reset(initial)) return;
-                Session.GrowthChanged -= SaveGrowth; Session.Impact -= View.OnImpact; Session.Impact -= Tutorial.OnImpact; Session.Changed -= Tutorial.StateChanged;
+                Session.GrowthChanged -= SaveGrowth; Session.Impact -= View.OnImpact; Session.RecordBroken -= View.OnRecordBroken; Session.Impact -= Tutorial.OnImpact; Session.Changed -= Tutorial.StateChanged;
                 Session = new MiningSession(settings, initial);
-                Session.GrowthChanged += SaveGrowth; Session.Impact += View.OnImpact;
+                Session.GrowthChanged += SaveGrowth; Session.Impact += View.OnImpact; Session.RecordBroken += View.OnRecordBroken;
                 Session.Impact += Tutorial.OnImpact; Session.Changed += Tutorial.StateChanged;
                 Modal = GameModal.None; View.ResetRunVisuals(); return;
             }
@@ -123,6 +132,29 @@ namespace DigDeep
                 SaleQuantity = Mathf.Min(SaleQuantity, Session.Stock(SaleKind));
                 return;
             }
+            if (Modal == GameModal.Upgrade)
+            {
+                if (Session.State == SessionState.Playing) return;
+                if (action == "refinery-upgrade") { RefineryTab = RefineryPage.Upgrade; return; }
+                if (action == "refinery-convert") { RefineryTab = RefineryPage.Conversion; EnsureConversionSelection(); return; }
+                if (RefineryTab == RefineryPage.Conversion)
+                {
+                    if (action.StartsWith("convert-ore-"))
+                    {
+                        var entry = OreCatalog.FromId(action.Substring(12));
+                        if (entry != null && settings.ConversionRate(entry.Kind) > 0) { ConversionKind = entry.Kind; ConversionQuantity = Session.MaximumConvertible(entry.Kind) > 0 ? 1 : 0; }
+                    }
+                    else if (action == "convert-less") ConversionQuantity = Mathf.Max(Session.MaximumConvertible(ConversionKind) > 0 ? 1 : 0, ConversionQuantity - 1);
+                    else if (action == "convert-more" && ConversionQuantity < Session.MaximumConvertible(ConversionKind)) ConversionQuantity++;
+                    else if (action == "convert-all") ConversionQuantity = Session.MaximumConvertible(ConversionKind);
+                    else if (action == "convert")
+                    {
+                        int previous = Session.EnergyTenths;
+                        if (Session.Convert(ConversionKind, ConversionQuantity)) { LastConversionTime = Time.unscaledTime; View.ShowNotice("에너지 +" + GameSettings.FormatEnergy(Session.EnergyTenths - previous), false); }
+                    }
+                    ConversionQuantity = Mathf.Min(ConversionQuantity, Session.MaximumConvertible(ConversionKind)); return;
+                }
+            }
             if (Modal == GameModal.Upgrade && action.StartsWith("upgrade-pick") && int.TryParse(action.Substring(12), out int upgradeIndex))
             { if (upgradeIndex >= 0 && upgradeIndex < Session.Picks.Length) { UpgradeIndex = upgradeIndex; Open(GameModal.UpgradeConfirm); } return; }
             if (Modal == GameModal.UpgradeConfirm && action == "upgrade-confirm")
@@ -140,7 +172,21 @@ namespace DigDeep
                 else if (action == "reset") Open(GameModal.ResetWarning);
             }
         }
-        void Open(GameModal modal) { CancelInput(); Modal = modal; if (modal == GameModal.Shop) { ShopTab = ShopPage.Buy; EnsureSaleSelection(); } }
+        void Open(GameModal modal)
+        {
+            CancelInput(); Modal = modal;
+            if (modal == GameModal.Shop) { ShopTab = ShopPage.Buy; EnsureSaleSelection(); }
+            if (modal == GameModal.Upgrade) RefineryTab = RefineryPage.Upgrade;
+        }
+        void EnsureConversionSelection()
+        {
+            if (settings.ConversionRate(ConversionKind) <= 0)
+            {
+                ConversionKind = Mineral.Stone;
+                foreach (var entry in OreCatalog.All) if (settings.ConversionRate(entry.Kind) > 0) { ConversionKind = entry.Kind; break; }
+            }
+            ConversionQuantity = Session.MaximumConvertible(ConversionKind) > 0 ? 1 : 0;
+        }
         void EnsureSaleSelection()
         {
             if (!Session.IsDiscovered(SaleKind))
@@ -150,8 +196,8 @@ namespace DigDeep
             }
             SaleQuantity = Session.Stock(SaleKind) > 0 ? 1 : 0;
         }
-        public Sprite PickSprite(string id) => id == "ALLOY" ? alloy : id == "IRON" ? iron : id == "STONE" ? stonePick : wood;
-        public Sprite BlockSprite(Mineral kind, int row) => kind == Mineral.Coal ? coalOre : kind == Mineral.Iron ? ironOre : kind == Mineral.Gold ? goldOre : row == 0 ? grass : stone;
+        public Sprite PickSprite(string id) => id == "DIAMOND" ? diamondPick : id == "ALLOY" ? alloy : id == "IRON" ? iron : id == "STONE" ? stonePick : wood;
+        public Sprite BlockSprite(Mineral kind, int row) => kind == Mineral.Oil ? null : kind == Mineral.Diamond ? diamondOre : kind == Mineral.Coal ? coalOre : kind == Mineral.Iron ? ironOre : kind == Mineral.Gold ? goldOre : row == 0 ? grass : stone;
         public void SaveGrowth() { if (Session != null) store.Save(Session.Growth()); }
         void OnApplicationPause(bool paused) { if (paused) { CancelInput(); SaveGrowth(); } }
         void OnApplicationFocus(bool focused) { if (!focused) { CancelInput(); SaveGrowth(); } }

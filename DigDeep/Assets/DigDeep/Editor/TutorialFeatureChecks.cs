@@ -65,7 +65,7 @@ namespace DigDeep.Editor
                 Check(game.Tutorial.Prompt == TutorialPrompt.None && store.Load(config).tutorial.menuStep == 3, "completed tutorials do not replay on later game over");
                 UnityEngine.Object.DestroyImmediate(instance); instance = null;
                 Switching(config, store); DropAndEffects(config, store);
-                Check(ProgressData.TryParse("{\"version\":3,\"money\":33,\"picks\":[{\"id\":\"WOOD\"}]}", out var legacy) && legacy.version == 5 && legacy.money == 33 && legacy.tutorial.controlsStep == 0, "legacy growth preserved with new tutorial checkpoints");
+                Check(ProgressData.TryParse("{\"version\":3,\"money\":33,\"picks\":[{\"id\":\"WOOD\"}]}", out var legacy) && legacy.version == 7 && legacy.money == 33 && legacy.tutorial.controlsStep == 0, "legacy growth preserved with new tutorial checkpoints");
                 Check(!ProgressData.TryParse("{\"version\":4,\"tutorial\":{\"controlsStep\":8},\"picks\":[{\"id\":\"WOOD\"}]}", out _), "invalid tutorial step cannot load");
                 Directory.CreateDirectory("Logs/Tutorial"); File.WriteAllText("Logs/Tutorial/checks.txt", "PASS " + checks + " tutorial/feedback checks. Existing mining checks: Logs/MiningUpgrade/checks.txt. No build.\n");
                 Debug.Log("DIGDEEP_TUTORIAL_FEEDBACK_PASSED " + checks);

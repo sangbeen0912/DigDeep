@@ -22,6 +22,9 @@ namespace DigDeep.Editor
         {
             var s = AssetDatabase.LoadAssetAtPath<GameSettings>("Assets/DigDeep/GameSettings.asset");
             if (s == null) throw new Exception("Game settings asset missing");
+            s.diamondOreHealth = 30; s.oilHealth = 30; s.oilSellPrice = 60;
+            s.diamondPower = 3; s.diamondDurability = 110; s.diamondUpgradeCost = 500; s.diamondUpgradeOre = 20; s.diamondUpgradeEnergyTenths = 50;
+            s.conversionRecipes = new[] { new ConversionRecipe { mineral = Mineral.Coal, energyTenthsPerOre = 1 } };
             s.blockHealth = 1; s.blockReward = 1; s.coalHealth = 5; s.ironOreHealth = 15; s.goldOreHealth = 15; s.goldSellPrice = 40;
             s.woodPower = 1; s.woodDurability = 20; s.stonePower = 1; s.stoneDurability = 30; s.ironPower = 2; s.ironDurability = 50; s.alloyPower = 2.5f; s.alloyDurability = 80;
             s.purchasePrices = new[] { 100, 1000, 10000 }; s.stoneUpgradeCost = 50; s.ironUpgradeCost = 200; s.ironUpgradeOre = 7;
@@ -30,7 +33,8 @@ namespace DigDeep.Editor
             s.spawnLines = new[] {
                 new SpawnLine { name = "1라인", firstRow = 2, lastRow = 10, coalPercent = 5, guaranteeOne = true },
                 new SpawnLine { name = "2라인", firstRow = 11, lastRow = 25, coalPercent = 5, ironPercent = 5, guaranteeOne = true },
-                new SpawnLine { name = "3라인", firstRow = 26, lastRow = 45, coalPercent = 1, ironPercent = 7, goldPercent = .8f, guaranteeOne = true }
+                new SpawnLine { name = "3라인", firstRow = 26, lastRow = 45, coalPercent = 1, ironPercent = 7, goldPercent = .8f, guaranteeOne = true },
+                new SpawnLine { name = "4라인", firstRow = 46, lastRow = 65, coalPercent = 1, ironPercent = 10, goldPercent = 2, diamondPercent = .5f, oilPercent = .1f, guaranteeOne = true }
             };
             EditorUtility.SetDirty(s);
         }

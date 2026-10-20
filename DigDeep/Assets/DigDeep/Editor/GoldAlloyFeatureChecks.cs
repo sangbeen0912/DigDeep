@@ -55,10 +55,10 @@ namespace DigDeep.Editor
             var upgrade = ProgressData.Initial(s, 500); upgrade.picks[0].id = "IRON"; upgrade.coal = 30; upgrade.iron = 10; upgrade.gold = 5;
             run = new MiningSession(s, upgrade);
             Check(run.UpgradePick(0) && run.Picks[0].Name == "ALLOY" && run.Money == 0 && run.Coal == 0 && run.Iron == 0 && run.Gold == 0, "alloy recipe consumes exactly specified resources");
-            Check(run.Picks[0].Power == 2.5f && run.Picks[0].Maximum == 80 && !run.UpgradePick(0) && run.UpgradeCost(0) == -1, "alloy is final upgrade stage");
-            Check(ProgressData.TryParse(JsonUtility.ToJson(run.Growth()), out restored) && restored.version == 5 && restored.picks[0].power == 2.5f && new MiningSession(s, restored).Picks[0].Name == "ALLOY", "alloy save round trip");
+            Check(run.Picks[0].Power == 2.5f && run.Picks[0].Maximum == 80 && !run.UpgradePick(0) && run.UpgradeCost(0) == 500, "alloy now requires diamond and energy for its next upgrade");
+            Check(ProgressData.TryParse(JsonUtility.ToJson(run.Growth()), out restored) && restored.version == 7 && restored.picks[0].power == 2.5f && new MiningSession(s, restored).Picks[0].Name == "ALLOY", "alloy save round trip");
             var legacy = ProgressData.Initial(s, 123); legacy.version = 4; legacy.picks[0].id = "IRON"; legacy.coal = 6; legacy.iron = 7; legacy.tutorial.controlsStep = 3; legacy.tutorial.menuStep = 1;
-            Check(ProgressData.TryParse(JsonUtility.ToJson(legacy), out restored) && restored.version == 5 && restored.money == 123 && restored.coal == 6 && restored.iron == 7 && restored.gold == 0 && restored.tutorial.controlsStep == 3 && restored.tutorial.menuStep == 1, "version four preserves growth and tutorial checkpoints");
+            Check(ProgressData.TryParse(JsonUtility.ToJson(legacy), out restored) && restored.version == 7 && restored.money == 123 && restored.coal == 6 && restored.iron == 7 && restored.gold == 0 && restored.tutorial.controlsStep == 3 && restored.tutorial.menuStep == 1, "version four preserves growth and tutorial checkpoints");
             legacy.version = 5; legacy.gold = -1;
             Check(!ProgressData.TryParse(JsonUtility.ToJson(legacy), out _), "negative gold rejected");
             legacy.gold = 5; legacy.discovered.Clear();
@@ -67,7 +67,7 @@ namespace DigDeep.Editor
         static void SpawnRules(GameSettings source)
         {
             var lines = source.spawnLines;
-            Check(lines.Length == 3 && lines[0].firstRow == 2 && lines[0].lastRow == 10 && lines[0].RowCount == 9, "line one rows two to ten: nine rows");
+            Check(lines.Length == 4 && lines[0].firstRow == 2 && lines[0].lastRow == 10 && lines[0].RowCount == 9, "line one rows two to ten: nine rows");
             Check(lines[1].firstRow == 11 && lines[1].lastRow == 25 && lines[1].RowCount == 15, "line two: fifteen rows");
             Check(lines[2].firstRow == 26 && lines[2].lastRow == 45 && lines[2].RowCount == 20, "line three: twenty rows");
             Check(lines[0].coalPercent == 5 && lines[1].coalPercent == 5 && lines[1].ironPercent == 5 && lines[2].coalPercent == 1 && lines[2].ironPercent == 7 && lines[2].goldPercent == .8f, "approved candidate probabilities");
@@ -114,8 +114,8 @@ namespace DigDeep.Editor
                 var sizes = new[] { game.wood.rect.size, game.stonePick.rect.size, game.iron.rect.size, game.alloy.rect.size };
                 Check(sizes.All(size => size == sizes[0]), "all pickaxes use identical sprite dimensions");
                 game.HandleAction("upgrade"); game.HandleAction("upgrade-pick0"); MiningFeatureChecks.Capture(game, "40-alloy-recipe");
-                var requirement = instance.GetComponentsInChildren<Text>(true).First(t => t.name == "Requirements");
-                Check(requirement.text.Contains("합금 곡괭이") && requirement.text.Contains("금광석 5개") && requirement.text.Contains("철광석 10개") && requirement.text.Contains("석탄 30개"), "all alloy requirements visible");
+                var requirement = string.Join(" ", game.View.UiRoot.Find("Trading and confirmation/Confirmation content/Readable requirements").GetComponentsInChildren<Text>().Select(t => t.text));
+                Check(requirement.Contains("합금 곡괭이") && requirement.Contains("금광석") && requirement.Contains("5개") && requirement.Contains("철광석") && requirement.Contains("10개") && requirement.Contains("석탄") && requirement.Contains("30개"), "all alloy requirements visible");
                 Check(game.View.ActionAt(new Vector2(240, 590)) == "upgrade-confirm", "alloy upgrade button enabled with full recipe");
                 game.HandleAction("upgrade-confirm"); MiningFeatureChecks.Capture(game, "41-alloy-owned");
                 Check(game.Session.Picks[0].Name == "ALLOY" && store.Load(settings).picks[0].id == "ALLOY" && store.Load(settings).gold == 0, "UI transaction persists alloy and deducted gold together");
