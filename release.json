@@ -1,12 +1,12 @@
 {
   "game": "DigDeep",
-  "built_at": "2026-10-20T12:13:51.024633+00:00",
-  "source_commit": "fab3902b6e292ebb68f0699a3a971771f27055b2",
+  "built_at": "2026-10-20T12:47:04.037755+00:00",
+  "source_commit": "56342e41a031d8992079cfc350b2e69c8330fcc1",
   "assets": [
     {
-      "path": "Build/Web.fcb22a4badb3.data",
-      "sha256": "fcb22a4badb3177cc44dfbdf3c93896fb64db7f79f5444988075307a49d624f8",
-      "bytes": 22788178
+      "path": "Build/Web.85f466a951f3.data",
+      "sha256": "85f466a951f310c05884996ba791f7ee88049fd5bd444e44b4573f95d17c2223",
+      "bytes": 22843792
     },
     {
       "path": "Build/Web.4de6c0f05fcf.framework.js",
@@ -14,14 +14,14 @@
       "bytes": 440552
     },
     {
-      "path": "Build/Web.57a48f5ba46c.loader.js",
-      "sha256": "57a48f5ba46c9332ce37e6b36703633914e63172ea1a9b083576842089940872",
+      "path": "Build/Web.9cf0a8132dd1.loader.js",
+      "sha256": "9cf0a8132dd19446ba6826dcf302cdf20f8fd1d6da1c1fec01ae1ebe533a54e5",
       "bytes": 26983
     },
     {
-      "path": "Build/Web.036874e4a1ae.wasm",
-      "sha256": "036874e4a1ae55fe9ebb43de83eb227bb3c535fa08f457c0273ff618601dbdc6",
-      "bytes": 48397831
+      "path": "Build/Web.03a928d39296.wasm",
+      "sha256": "03a928d39296061e796a22e1975d03b5ffa3d0933af223427a9fb98049399d28",
+      "bytes": 48399824
     }
   ]
 }
