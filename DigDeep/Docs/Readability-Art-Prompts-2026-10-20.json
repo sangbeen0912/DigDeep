@@ -1,0 +1,11 @@
+{
+  "mode": "builtin image_gen",
+  "assets": {
+    "MoneyIcon": "C:/프로젝트모음/DigDeep_Project/DigDeep/DigDeep/Assets/DigDeep/Art/MoneyIcon.png",
+    "EnergyIcon": "C:/프로젝트모음/DigDeep_Project/DigDeep/DigDeep/Assets/DigDeep/Art/EnergyIcon.png"
+  },
+  "prompts": {
+    "MoneyIcon": "Use case: stylized-concept. Asset type: ONE small inventory currency icon for DigDeep, a Minecraft-inspired 2D pixel mining game. One round GOLD COIN viewed straight on with a slightly stepped pixel outline, a thick double gold rim and a clean bright yellow central face. A few large amber pixel shadow blocks and pale gold highlights imply thickness. Centered, compact and easily identifiable at 23 pixels. A tiny simple embossed diamond-shaped mark is okay but NO text, letters, numbers, currency glyphs or logo. Coarse crisp square pixels, strong dark brown outline, restrained gold/amber palette, simple and uncluttered, matching an indie pixel-art mining UI. Single isolated coin only, no pile, no scenery, no other objects, no shadow outside the coin, no decorative sparks. Genuinely transparent background with comfortable even margin.",
+    "EnergyIcon": "Use case: stylized-concept. Asset type: ONE small ENERGY currency icon for DigDeep, a Minecraft-inspired 2D pixel mining game. A compact cyan energy core: round or hexagonal turquoise ORB with a bright white LIGHTNING BOLT in its center, surrounded by a thick dark teal stepped pixel rim. The bolt must read clearly at 23 pixels. Use large crisp coarse square pixel clusters, cyan/teal/white colors, a few bright highlights, no thin intricate detail. A simple self-contained resource icon, clearly different from an ore tile or a diamond gemstone. Front-facing and centered. One icon only, transparent background with even margin. No text, letters, numbers, label, surrounding decoration, loose minerals, base or machine. No blurry glow outside the silhouette."
+  }
+}

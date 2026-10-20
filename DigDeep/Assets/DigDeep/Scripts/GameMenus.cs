@@ -62,7 +62,8 @@ namespace DigDeep
             inventory = Node(layer, "Inventory content", new Rect(0, 0, 480, 854));
             var energyCard = Box(inventory, "Energy inventory card", new Rect(55, 299, 370, 58), muted);
             Box(energyCard.transform, "Energy accent", new Rect(0, 0, 4, 58), new Color32(63, 216, 231, 255));
-            var energyName = Label(energyCard.transform, "Energy name", new Rect(16, 0, 130, 58), "에너지", 18, Color.white); energyName.alignment = TextAnchor.MiddleLeft;
+            var energyIcon = Box(energyCard.transform, "Energy icon", new Rect(14, 14, 30, 30), game.energyIcon != null ? Color.white : new Color32(63, 216, 231, 255), game.energyIcon); energyIcon.preserveAspect = true;
+            var energyName = Label(energyCard.transform, "Energy name", new Rect(54, 0, 90, 58), "에너지", 18, Color.white); energyName.alignment = TextAnchor.MiddleLeft;
             energy = Label(energyCard.transform, "Energy amount", new Rect(147, 0, 205, 58), "", 24, new Color32(101, 233, 242, 255)); energy.alignment = TextAnchor.MiddleRight;
             inventoryList = CreateList(inventory, "Discovered inventory list", new Rect(55, 368, 370, 207), 112);
             inventoryEmpty = Label(inventory, "Empty inventory", new Rect(55, 389, 370, 80), "아직 확인한 광물이 없어요.\n채굴한 광물이 여기에 보관됩니다.", 16, Color.white);
@@ -281,7 +282,7 @@ namespace DigDeep
             for (int i = 0; i < requirementRows.Length; i++)
             {
                 var background = Box(requirementTable, "Requirement row " + i, new Rect(55, 386 + i * 38, 370, 35), muted);
-                var icon = Box(background.transform, "Icon", new Rect(6, 6, 23, 23), Color.white);
+                var icon = Box(background.transform, "Icon", new Rect(6, 6, 23, 23), Color.white); icon.preserveAspect = true;
                 var name = Label(background.transform, "Material", new Rect(36, 0, 113, 35), "", 15, Color.white); name.alignment = TextAnchor.MiddleLeft;
                 requirementRows[i] = new RequirementRow { Background = background, Icon = icon, Name = name,
                     Needed = Label(background.transform, "Required amount", new Rect(157, 0, 103, 35), "", 18, Color.white),
@@ -313,12 +314,12 @@ namespace DigDeep
                 row.Owned.fontSize = row.Owned.text.Length > 9 ? 12 : 18;
                 row.Owned.color = owned >= needed ? new Color32(163, 235, 187, 255) : new Color32(255, 156, 143, 255);
             }
-            Row("돈", s.UpgradeCost(index), s.Money, null, gold, moneyValue: true);
+            Row("돈", s.UpgradeCost(index), s.Money, game.moneyIcon, game.moneyIcon != null ? Color.white : gold, moneyValue: true);
             Row("석탄", s.UpgradeCoal(index), s.Coal, game.coalOre, Color.white);
             Row("철광석", s.UpgradeOre(index), s.Iron, game.ironOre, Color.white);
             Row("금광석", s.UpgradeGold(index), s.Gold, game.goldOre, Color.white);
             Row("다이아몬드", s.UpgradeDiamond(index), s.Diamond, game.diamondOre, Color.white);
-            Row("에너지", s.UpgradeEnergy(index), s.EnergyTenths, null, new Color32(63, 216, 231, 255), energyValue: true);
+            Row("에너지", s.UpgradeEnergy(index), s.EnergyTenths, game.energyIcon, game.energyIcon != null ? Color.white : new Color32(63, 216, 231, 255), energyValue: true);
             bool can = s.CanUpgrade(index);
             requirementStatus.text = can ? "강화할 수 있어요." : "붉게 표시된 재료가 부족해요.";
             requirementStatus.color = can ? new Color32(163, 235, 187, 255) : new Color32(255, 156, 143, 255);

@@ -213,7 +213,7 @@ namespace DigDeep
             bool playing = session.State == SessionState.Playing;
             bool ready = session.State == SessionState.Ready;
             overlay.gameObject.SetActive(session.State == SessionState.GameOver);
-            readyButton.gameObject.SetActive(ready); readyHint.gameObject.SetActive(ready);
+            readyButton.gameObject.SetActive(ready); readyHint.gameObject.SetActive(ready && game.Tutorial.Prompt != TutorialPrompt.Dig);
             regroupButton.gameObject.SetActive(playing);
             shopButton.gameObject.SetActive(!playing); upgradeButton.gameObject.SetActive(!playing); inventoryButton.gameObject.SetActive(!playing);
             resetButton.gameObject.SetActive(!playing);

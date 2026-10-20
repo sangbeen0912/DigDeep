@@ -22,7 +22,7 @@ namespace DigDeep.Editor
             RefiningFeatureChecks.Run();
             Debug.Log("DIGDEEP_REFINING_VERIFIED_NO_BUILD");
         }
-        static void Import(string name, bool trim, float aspect = 0)
+        public static void Import(string name, bool trim, float aspect = 0, int maxSize = 512)
         {
             string path = "Assets/DigDeep/Art/" + name + ".png";
             var importer = (TextureImporter)AssetImporter.GetAtPath(path);
@@ -54,7 +54,7 @@ namespace DigDeep.Editor
             var rect = new SpriteRect { name = name, rect = area, alignment = SpriteAlignment.Center, pivot = new Vector2(.5f, .5f), spriteID = previous?.spriteID ?? GUID.Generate() };
             provider.SetSpriteRects(new[] { rect });
             provider.GetDataProvider<ISpriteNameFileIdDataProvider>().SetNameFileIdPairs(new[] { new SpriteNameFileIdPair(name, rect.spriteID) });
-            provider.Apply(); importer.maxTextureSize = 512; importer.isReadable = false; importer.SaveAndReimport();
+            provider.Apply(); importer.maxTextureSize = maxSize; importer.isReadable = false; importer.SaveAndReimport();
         }
         static void Connect()
         {

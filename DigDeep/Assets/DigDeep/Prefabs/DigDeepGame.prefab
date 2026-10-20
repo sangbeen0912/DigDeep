@@ -110,4 +110,6 @@ MonoBehaviour:
   diamondPick: {fileID: -1154699700, guid: 5029c43ed0027cf48ad9bc5270ac13c9, type: 3}
   diamondOre: {fileID: 1350501120, guid: 4a05ce9a3171d8848b1493a68b62bca1, type: 3}
   energyConverter: {fileID: -140845772, guid: e64ee7f6883cfe440a8652a943a93ea1, type: 3}
+  moneyIcon: {fileID: 231546154, guid: 08ce5f25864b17b408cb20a47b949acd, type: 3}
+  energyIcon: {fileID: -1553370976, guid: ad6a7eff29280b146b5a0dd12cfa16d9, type: 3}
   font: {fileID: 12800000, guid: 995492bfe62ca8149a3bc1e6ea771ebe, type: 3}

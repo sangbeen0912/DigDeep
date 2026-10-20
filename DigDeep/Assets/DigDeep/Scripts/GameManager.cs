@@ -11,6 +11,7 @@ namespace DigDeep
         public Sprite stone, grass, wood, stonePick, iron, alloy, coalOre, ironOre, goldOre;
         public Sprite shopSkin, inventorySkin, upgradeSkin, digSkin;
         public Sprite diamondPick, diamondOre, energyConverter;
+        public Sprite moneyIcon, energyIcon;
         public Font font;
         public MiningSession Session { get; private set; }
         public GameView View { get; private set; }
