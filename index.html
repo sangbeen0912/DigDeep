@@ -20,10 +20,10 @@
     const canvas = document.querySelector('canvas');
     canvas.addEventListener('contextmenu', e => e.preventDefault());
     const script = document.createElement('script');
-    script.src = 'Build/Web.dd3dbc7e03a7.loader.js';
+    script.src = 'Build/Web.319eb49a7313.loader.js';
     script.onload = () => createUnityInstance(canvas, {
-      dataUrl: 'Build/Web.d13de55e175f.data', frameworkUrl: 'Build/Web.d024fad50272.framework.js',
-      codeUrl: 'Build/Web.94c9aee563ac.wasm', streamingAssetsUrl: 'StreamingAssets',
+      dataUrl: 'Build/Web.cada1747570a.data', frameworkUrl: 'Build/Web.d024fad50272.framework.js',
+      codeUrl: 'Build/Web.afc17a094b1e.wasm', streamingAssetsUrl: 'StreamingAssets',
       companyName: 'DigDeep', productName: 'DigDeep', productVersion: '0.1',
       devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
     }, value => document.querySelector('progress').value = value)
