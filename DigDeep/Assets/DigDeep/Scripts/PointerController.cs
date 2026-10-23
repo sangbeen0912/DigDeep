@@ -10,7 +10,7 @@ namespace DigDeep
     {
         GameManager game;
         TouchControl touch;
-        bool active, pickCandidate, dragging, held, canceled;
+        bool active, pickCandidate, dragging, held, canceled, bombGesture;
         bool menuScrollCandidate, menuScrolling;
         string action;
         Vector2 origin, last;
@@ -52,7 +52,8 @@ namespace DigDeep
             menuScrolling = false;
             menuScrollCandidate = game.View.BeginMenuScroll(origin);
             action = game.View.ActionAt(origin);
-            pickCandidate = action == null && game.Session.CanMine && game.View.PickContains(origin);
+            bombGesture = action == null && game.Session.IsDynamite;
+            pickCandidate = !bombGesture && action == null && game.Session.CanMine && game.View.PickContains(origin);
             if (action == null && !game.Tutorial.AllowsFieldStart(pickCandidate)) { action = "blocked"; pickCandidate = false; }
             if (pickCandidate) game.StopMining();
             if (action == null && (!game.View.InField(origin) || !game.Session.CanMine)) canceled = true;
@@ -75,6 +76,7 @@ namespace DigDeep
                 }
                 return;
             }
+            if (bombGesture) { if (distance >= game.settings.dragThreshold) { dragging = true; game.View.SetDrag(last); } return; }
             if (pickCandidate)
             {
                 if (distance >= game.settings.dragThreshold) dragging = true;
@@ -97,6 +99,8 @@ namespace DigDeep
                 {
                     game.HandleAction(action);
                 }
+                else if (bombGesture && action == null)
+                { if (game.View.InField(last)) game.AimBlast(game.View.CellAt(last)); }
                 else if (dragging)
                 { if (game.View.InField(last)) game.Drop(game.View.CellAt(last)); else game.DropOutsideField(); }
                 else if (action == null && !pickCandidate && !held) game.Tap();

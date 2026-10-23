@@ -126,16 +126,16 @@ namespace DigDeep.Editor
                     MiningFeatureChecks.Tick(component, "Awake"); Refresh(game);
                     var point = game.View.ScreenPoint(GameUILayout.Presentation.center);
                     game.Controls.Down(point); game.Controls.Up(point); Refresh(game);
-                    Check(game.Session.Money == 20000 && game.Session.Gold == 30 && game.Session.State == SessionState.Ready && game.Session.Picks[0].Remaining == 20, "presentation button shares input without mining");
-                    Check(store.Load(settings).gold == 30 && store.Load(settings).money == 20000, "presentation grant automatically persists");
+                    Check(game.Session.Money == 100000 && game.Session.Gold == 100 && game.Session.State == SessionState.Ready && game.Session.Picks[0].Remaining == 20, "presentation button shares input without mining");
+                    Check(store.Load(settings).gold == 100 && store.Load(settings).money == 100000, "presentation grant automatically persists");
                     MiningFeatureChecks.Capture(game, "61-presentation-grant");
-                    game.Play(); Refresh(game); var before = game.Session.Money; game.HandleAction("presentation-resources");
-                    Check(game.Session.Money == before && !game.View.UiRoot.Find("Presentation resource button").gameObject.activeSelf, "presentation button hidden and blocked during play");
+                    game.Play(); Refresh(game); var before = game.Session.Money; game.HandleAction("testing-resources");
+                    Check(game.Session.Money == before && !game.View.UiRoot.Find("Testing resource button").gameObject.activeSelf, "presentation button hidden and blocked during play");
                     game.Session.Strike(); Refresh(game);
                     Check(store.Load(settings).bestDepth == 1 && instance.GetComponentsInChildren<Text>(true).Any(t => t.text.StartsWith("최고 깊이 갱신!")), "record notice and save through manager");
                     MiningFeatureChecks.Capture(game, "62-record-broken"); game.Regroup();
                     MiningFeatureChecks.Tick(component, "OnDisable"); UnityEngine.Object.DestroyImmediate(component.gameObject); Refresh(game);
-                    Check(game.View.ActionAt(GameUILayout.Presentation.center) == "blocked" && game.Session.Money == 20001 && game.Session.Gold == 30, "removing optional component removes button and preserves game data");
+                    Check(game.View.ActionAt(GameUILayout.Presentation.center) == "blocked" && game.Session.Money == 100001 && game.Session.Gold == 100, "removing optional component removes button and preserves game data");
                     game.HandleAction("upgrade"); Check(game.Modal == GameModal.Upgrade, "regular UI still works after presentation removal"); game.HandleAction("close");
                 }
                 UnityEngine.Object.DestroyImmediate(instance); instance = null;
@@ -144,8 +144,8 @@ namespace DigDeep.Editor
                 var presenter = instance.GetComponentsInChildren<MonoBehaviour>(true).FirstOrDefault(m => m.GetType().Name == "PresentationResourcesButton");
                 if (presenter != null)
                 {
-                    MiningFeatureChecks.Tick(presenter, "Awake"); game.HandleAction("presentation-resources");
-                    Check(game.Tutorial.Prompt == TutorialPrompt.Dig && game.Session.Tutorial.controlsStep == 0 && game.Session.Money == 20000, "presentation grant does not skip tutorial");
+                    MiningFeatureChecks.Tick(presenter, "Awake"); game.HandleAction("testing-resources");
+                    Check(game.Tutorial.Prompt == TutorialPrompt.Dig && game.Session.Tutorial.controlsStep == 0 && game.Session.Money == 100000, "presentation grant does not skip tutorial");
                 }
                 for (int step = 0; step < 3; step++)
                 {

@@ -121,7 +121,7 @@ namespace DigDeep.Editor
                 Check(RewardTint(game, "석탄 +1") == GameView.OreColor(Mineral.Coal), "coal loot label uses coal image palette");
                 MiningFeatureChecks.Capture(game, "28-coal-feedback"); int objects = instance.GetComponentsInChildren<Transform>(true).Length;
                 for (int i = 0; i < 200; i++) game.Session.Strike(); Refresh(game);
-                Check(instance.GetComponentsInChildren<Transform>(true).Length == objects && RewardCount(game, "석탄 +1") <= 6, "long mining reuses bounded label and particle pools without object growth");
+                Check(instance.GetComponentsInChildren<Transform>(true).Length == objects && RewardCount(game, "석탄 +1") <= 10, "long mining reuses bounded label and particle pools without object growth");
                 game.Regroup(); Refresh(game); Check(RewardCount(game, "석탄 +1") == 0, "regroup clears transient feedback");
             }
             finally { UnityEngine.Object.DestroyImmediate(instance); }

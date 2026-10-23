@@ -21,7 +21,10 @@ namespace DigDeep
             if (data == null || data.version < 1 || data.version > 7 || data.money < 0 || data.coal < 0 || data.iron < 0 || data.gold < 0 || data.diamond < 0 || data.oil < 0 || data.energyTenths < 0 || data.bestDepth < 0 ||
                 data.picks == null || data.picks.Count < 1 || data.picks.Count > GameSettings.MaximumPicks) return false;
             foreach (var p in data.picks)
-                if (p == null || (p.id != "WOOD" && p.id != "STONE" && p.id != "IRON" && p.id != "ALLOY" && p.id != "DIAMOND") || p.upgrade < 0) return false;
+                if (p == null || !GameSettings.KnownPick(p.id) || p.upgrade < 0) return false;
+            for (int i = 0; i < data.picks.Count; i++)
+                if (GameSettings.IsEquipment(data.picks[i].id))
+                    for (int j = i + 1; j < data.picks.Count; j++) if (data.picks[j].id == data.picks[i].id) return false;
             // Duplicate WOOD entries represent distinct owned pickaxes.
             if (data.discovered == null) data.discovered = new List<string>();
             foreach (var id in data.discovered) if (OreCatalog.FromId(id) == null) return false;
@@ -46,7 +49,6 @@ namespace DigDeep
 #if UNITY_EDITOR
             if (string.IsNullOrEmpty(suffix) && Array.IndexOf(Environment.GetCommandLineArgs(), "-digdeep-revision-test") >= 0) suffix = ".Verification";
 #endif
-            if (string.IsNullOrEmpty(suffix) && Array.IndexOf(Environment.GetCommandLineArgs(), "-digdeep-smoke") >= 0) suffix = ".Smoke";
             key = "DigDeep.Progress.v1" + suffix; backup = "DigDeep.Progress.backup.v1" + suffix; legacy = GameSettings.MoneyKey + suffix;
         }
         public ProgressData Load(GameSettings settings)

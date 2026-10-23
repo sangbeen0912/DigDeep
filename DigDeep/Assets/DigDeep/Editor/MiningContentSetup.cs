@@ -23,8 +23,10 @@ namespace DigDeep.Editor
             var s = AssetDatabase.LoadAssetAtPath<GameSettings>("Assets/DigDeep/GameSettings.asset");
             if (s == null) throw new Exception("Game settings asset missing");
             s.diamondOreHealth = 30; s.oilHealth = 30; s.oilSellPrice = 60;
-            s.diamondPower = 3; s.diamondDurability = 110; s.diamondUpgradeCost = 500; s.diamondUpgradeOre = 20; s.diamondUpgradeEnergyTenths = 50;
-            s.conversionRecipes = new[] { new ConversionRecipe { mineral = Mineral.Coal, energyTenthsPerOre = 1 } };
+            s.diamondPower = 3; s.diamondDurability = 110; s.diamondUpgradeCost = 1000; s.diamondUpgradeOre = 20; s.diamondUpgradeEnergyTenths = 50;
+            s.conversionRecipes = new[] { new ConversionRecipe { mineral = Mineral.Coal, energyTenthsPerOre = 1 }, new ConversionRecipe { mineral = Mineral.Oil, energyTenthsPerOre = 10 } };
+            s.superalloyPower = 5; s.superalloyDurability = 150; s.superalloyUpgradeCost = 2000; s.superalloyUpgradeIron = 50; s.superalloyUpgradeDiamond = 10; s.superalloyUpgradeEnergyTenths = 100;
+            s.ironSpeed = 1.1f; s.alloySpeed = 1.2f; s.diamondSpeed = 1.3f; s.superalloySpeed = 1.5f;
             s.blockHealth = 1; s.blockReward = 1; s.coalHealth = 5; s.ironOreHealth = 15; s.goldOreHealth = 15; s.goldSellPrice = 40;
             s.woodPower = 1; s.woodDurability = 20; s.stonePower = 1; s.stoneDurability = 30; s.ironPower = 2; s.ironDurability = 50; s.alloyPower = 2.5f; s.alloyDurability = 80;
             s.purchasePrices = new[] { 100, 1000, 10000 }; s.stoneUpgradeCost = 50; s.ironUpgradeCost = 200; s.ironUpgradeOre = 7;

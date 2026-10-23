@@ -63,11 +63,13 @@ MonoBehaviour:
   ironPower: 2
   alloyPower: 2.5
   diamondPower: 3
+  superalloyPower: 5
   woodDurability: 20
   stoneDurability: 30
   ironDurability: 50
   alloyDurability: 80
   diamondDurability: 110
+  superalloyDurability: 150
   purchasePrices: 64000000e803000010270000
   stoneUpgradeCost: 50
   ironUpgradeCost: 200
@@ -78,12 +80,36 @@ MonoBehaviour:
   alloyUpgradeCoal: 30
   alloyUpgradeIron: 10
   alloyUpgradeGold: 5
-  diamondUpgradeCost: 500
+  diamondUpgradeCost: 1000
   diamondUpgradeOre: 20
   diamondUpgradeEnergyTenths: 50
+  superalloyUpgradeCost: 2000
+  superalloyUpgradeIron: 50
+  superalloyUpgradeDiamond: 10
+  superalloyUpgradeEnergyTenths: 100
+  equipmentCost: 5000
+  equipmentEnergyTenths: 1000
+  drillDurability: 60
+  tungstenDurability: 250
+  crusherDurability: 20
+  dynamiteDurability: 5
+  drillPower: 3
+  tungstenPower: 7
+  crusherPower: 20
+  dynamitePower: 500
+  drillSpeed: 3
+  tungstenSpeed: 1.5
+  crusherSpeed: 0.33
+  crusherExtraDrops: 1
   conversionRecipes:
   - mineral: 1
     energyTenthsPerOre: 1
+  - mineral: 5
+    energyTenthsPerOre: 10
   holdDelay: 0.28
   strikeInterval: 0.34
+  ironSpeed: 1.1
+  alloySpeed: 1.2
+  diamondSpeed: 1.3
+  superalloySpeed: 1.5
   dragThreshold: 10

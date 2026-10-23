@@ -6,10 +6,10 @@ namespace DigDeep.Presentation
     [DisallowMultipleComponent, DefaultExecutionOrder(10)]
     public sealed class PresentationResourcesButton : MonoBehaviour
     {
-        public int money = 20000, coal = 200, iron = 100, gold = 30;
+        public int money = 100000, coal = 500, iron = 500, gold = 100, diamond = 200, oil = 50, energyTenths = 5000;
         GameManager game;
         GameObject button;
-        const string Id = "presentation-resources";
+        const string Id = "testing-resources";
         void Awake() => Attach();
         void OnEnable() => Attach();
         void Start() => Attach();
@@ -19,7 +19,7 @@ namespace DigDeep.Presentation
             game = GetComponentInParent<GameManager>();
             if (game == null || game.View == null) return;
             var area = GameUILayout.Presentation;
-            var target = new GameObject("Presentation resource button", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            var target = new GameObject("Testing resource button", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             target.SetParent(game.View.UiRoot, false); target.anchorMin = target.anchorMax = new Vector2(0, 1); target.pivot = new Vector2(0, 1);
             target.anchoredPosition = new Vector2(area.x, -area.y); target.sizeDelta = area.size;
             var image = target.GetComponent<Image>(); image.color = new Color32(48, 63, 72, 255); image.raycastTarget = false;
@@ -27,7 +27,7 @@ namespace DigDeep.Presentation
             caption.rectTransform.SetParent(target, false); caption.rectTransform.anchorMin = Vector2.zero; caption.rectTransform.anchorMax = Vector2.one;
             caption.rectTransform.offsetMin = new Vector2(4, 3); caption.rectTransform.offsetMax = new Vector2(-4, -3);
             caption.font = game.font != null ? game.font : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            caption.fontSize = 13; caption.alignment = TextAnchor.MiddleCenter; caption.text = "발표용 재화 지급"; caption.color = new Color32(239, 189, 88, 255); caption.raycastTarget = false;
+            caption.fontSize = 13; caption.alignment = TextAnchor.MiddleCenter; caption.text = "시험용 재화 지급"; caption.color = new Color32(239, 189, 88, 255); caption.raycastTarget = false;
             button = target.gameObject;
             game.View.RegisterOptionalButton(Id, target, Available, Grant);
             button.SetActive(Available());
@@ -36,7 +36,7 @@ namespace DigDeep.Presentation
         void Grant()
         {
             if (!Available()) return;
-            if (game.Session.GrantResources(money, coal, iron, gold)) game.View.ShowNotice("발표용 재화를 지급했어요.", false);
+            if (game.Session.GrantResources(money, coal, iron, gold, diamond, oil, energyTenths)) game.View.ShowNotice("시험용 제작 재화를 지급했어요.", false);
         }
         void OnDisable()
         {

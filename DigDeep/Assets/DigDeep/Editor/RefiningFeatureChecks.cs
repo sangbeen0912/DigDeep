@@ -101,18 +101,18 @@ namespace DigDeep.Editor
         }
         static void UpgradeRules(GameSettings s)
         {
-            var data = Data(s, "ALLOY"); data.money = 500; data.diamond = 20; data.coal = 50;
+            var data = Data(s, "ALLOY"); data.money = 1000; data.diamond = 20; data.coal = 50;
             var run = new MiningSession(s, data);
             Check(!run.CanUpgrade(0) && run.Convert(Mineral.Coal, 50) && run.CanUpgrade(0), "coal conversion supplies the required five energy");
-            Check(run.UpgradePick(0) && run.Money == 0 && run.Diamond == 0 && run.EnergyTenths == 0 && run.Picks[0].Name == "DIAMOND" && run.Picks[0].Power == 3 && run.Picks[0].Maximum == 110, "diamond upgrade consumes exactly 500 money, 20 diamonds and five energy");
-            Check(run.UpgradeCost(0) == -1 && !run.UpgradePick(0), "diamond is the final stage");
+            Check(run.UpgradePick(0) && run.Money == 0 && run.Diamond == 0 && run.EnergyTenths == 0 && run.Picks[0].Name == "DIAMOND" && run.Picks[0].Power == 3 && run.Picks[0].Maximum == 110, "diamond upgrade consumes exactly 1000 money, 20 diamonds and five energy");
+            Check(run.UpgradeCost(0) == 2000 && !run.UpgradePick(0), "diamond exposes the superalloy recipe but cannot upgrade without resources");
             for (int missing = 0; missing < 3; missing++)
             {
-                data = Data(s, "ALLOY"); data.money = missing == 0 ? 499 : 500; data.diamond = missing == 1 ? 19 : 20; data.energyTenths = missing == 2 ? 49 : 50;
+                data = Data(s, "ALLOY"); data.money = missing == 0 ? 999 : 1000; data.diamond = missing == 1 ? 19 : 20; data.energyTenths = missing == 2 ? 49 : 50;
                 run = new MiningSession(s, data); string before = JsonUtility.ToJson(run.Growth());
                 Check(!run.UpgradePick(0) && before == JsonUtility.ToJson(run.Growth()), "missing diamond upgrade resource " + missing + " leaves every balance unchanged");
             }
-            data = Data(s, "ALLOY"); data.money = 500; data.diamond = 20; data.energyTenths = 50; run = new MiningSession(s, data); run.Start();
+            data = Data(s, "ALLOY"); data.money = 1000; data.diamond = 20; data.energyTenths = 50; run = new MiningSession(s, data); run.Start();
             Check(!run.UpgradePick(0) && run.Diamond == 20 && run.EnergyTenths == 50, "diamond upgrades are blocked during gameplay");
         }
         static void Movement(GameSettings s)
@@ -141,7 +141,7 @@ namespace DigDeep.Editor
             GameObject instance = null; var store = new ProgressStore();
             try
             {
-                var data = Data(s, "ALLOY"); data.money = 500; data.coal = 100; data.diamond = 20; data.energyTenths = 49;
+                var data = Data(s, "ALLOY"); data.money = 1000; data.coal = 100; data.diamond = 20; data.energyTenths = 49;
                 instance = SpawnGame(s, data); var game = instance.GetComponent<GameManager>();
                 Check(game.diamondPick != null && game.diamondOre != null && game.energyConverter != null && game.PickSprite("DIAMOND") == game.diamondPick, "new sprites are attached in the real game prefab");
                 var bounds = game.View.ButtonBounds("upgrade");

@@ -39,7 +39,7 @@ namespace DigDeep.Editor
             GameObject instance = null;
             try
             {
-                var data = ProgressData.Initial(settings); data.tutorial = TutorialProgress.Completed(); data.picks[0].id = "ALLOY"; data.money = 500; data.diamond = 20; data.energyTenths = 50;
+                var data = ProgressData.Initial(settings); data.tutorial = TutorialProgress.Completed(); data.picks[0].id = "ALLOY"; data.money = 1000; data.diamond = 20; data.energyTenths = 50;
                 instance = Spawn(settings, data); var game = instance.GetComponent<GameManager>(); string before = JsonUtility.ToJson(game.Session.Growth());
                 Check(game.moneyIcon != null && game.energyIcon != null && game.moneyIcon != game.energyIcon, "both distinct currency sprites are attached");
                 foreach (string asset in new[] { "MoneyIcon", "EnergyIcon" })

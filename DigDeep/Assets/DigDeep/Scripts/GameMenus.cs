@@ -8,14 +8,18 @@ namespace DigDeep
     public sealed class GameMenus : MonoBehaviour
     {
         GameManager game; RectTransform layer;
+        int displayedRevision = -1; GameModal displayedModal; MiningSession displayedSession;
         Text title, body, wallet, buyLabel, saleInfo, quantity, confirmLabel;
         Image buyButton, saleButton, confirmButton;
         RectTransform shop, purchase, sale, saleFooter, inventory, upgrades, confirmation;
         Image[] pickCards = new Image[4], pickIcons = new Image[4];
         Text[] pickLabels = new Text[4];
         Image buyTab, sellTab;
-        RectTransform refinery, conversion, requirementTable;
+        RectTransform refinery, conversion, requirementTable, equipmentSelection;
+        readonly Image[] equipmentCards = new Image[4];
+        readonly Text[] equipmentLabels = new Text[4];
         Image upgradeTab, convertTab, conversionButton, converterImage;
+        Text upgradeSpeed;
         Text energy, conversionInfo, conversionAmount, conversionGain, upgradeSummary, requirementStatus;
         sealed class RequirementRow { public Image Background, Icon; public Text Name, Needed, Owned; }
         readonly RequirementRow[] requirementRows = new RequirementRow[4];
@@ -28,6 +32,7 @@ namespace DigDeep
             public float Offset, RowHeight, Maximum;
         }
         OreList saleList, inventoryList, conversionList, scrolling;
+        Mineral shownConversion = Mineral.Stone;
         float scrollOrigin;
         readonly Dictionary<string, Rect> actions = new Dictionary<string, Rect>();
         Color dark = new Color32(20, 30, 38, 255), gold = new Color32(239, 189, 88, 255), muted = new Color32(48, 62, 72, 255);
@@ -81,11 +86,11 @@ namespace DigDeep
                 GameView.TiltPickIcon(pickIcons[i]);
                 pickLabels[i] = Label(pickCards[i].transform, "Stats", new Rect(5, 64, 168, 47), "", 13, Color.white);
             }
-            Label(upgrades, "Upgrade hint", new Rect(45, 606, 390, 30), "강화할 곡괭이를 선택하세요", 15, gold);
+            Label(upgrades, "Upgrade hint", new Rect(45, 606, 390, 30), "강화할 장비를 선택하세요", 15, gold);
             CreateConversion();
             confirmation = Node(layer, "Confirmation content", new Rect(0, 0, 480, 854));
             body = Label(confirmation, "Requirements", new Rect(48, 315, 384, 210), "", 18, Color.white);
-            CreateRequirements();
+            CreateRequirements(); CreateEquipmentChoices();
             confirmButton = Action(confirmation, "confirm", new Rect(55, 565, 370, 55), "", gold, dark);
             confirmLabel = confirmButton.GetComponentInChildren<Text>();
             Action(layer, "close", new Rect(55, 686, 370, 34), "뒤로가기", muted, Color.white);
@@ -95,7 +100,10 @@ namespace DigDeep
         {
             var modal = game.Modal; var session = game.Session;
             layer.gameObject.SetActive(modal != GameModal.None);
-            if (modal == GameModal.None) return;
+            if (modal == GameModal.None) { displayedRevision = -1; return; }
+            if (displayedRevision == game.MenuRevision && displayedModal == modal && displayedSession == session && Time.unscaledTime - game.LastConversionTime > .35f) return;
+            displayedRevision = game.MenuRevision; displayedModal = modal; displayedSession = session;
+            equipmentSelection.gameObject.SetActive(modal == GameModal.EquipmentChoice);
             shop.gameObject.SetActive(modal == GameModal.Shop); inventory.gameObject.SetActive(modal == GameModal.Inventory);
             refinery.gameObject.SetActive(modal == GameModal.Upgrade);
             upgrades.gameObject.SetActive(game.RefineryTab == RefineryPage.Upgrade);
@@ -144,13 +152,25 @@ namespace DigDeep
                     pickLabels[i].text = (i + 1) + "번 " + PickName(pick.Name) + "\n피해 " + pick.Power + " · 내구도 " + pick.Maximum;
                 }
             }
+            else if (modal == GameModal.EquipmentChoice)
+            {
+                title.text = "장비 루트 선택";
+                for (int i = 0; i < GameSettings.EquipmentChoices.Length; i++)
+                {
+                    string id = GameSettings.EquipmentChoices[i]; bool owned = session.HasEquipment(id);
+                    equipmentCards[i].color = owned ? new Color32(42, 48, 53, 255) : muted;
+                    equipmentLabels[i].text = PickName(id) + "\n내구도 " + game.settings.Durability(id) + " · 피해 " + game.settings.Power(id)
+                        + "\n" + (id == "DYNAMITE" ? "한 판 최대 " + game.settings.Durability(id) + "회" : "속도 " + game.settings.SpeedMultiplier(id).ToString("0.##") + "배") + "\n" + (owned ? "보유 중" : EquipmentTrait(id));
+                    equipmentLabels[i].color = owned ? new Color32(135, 145, 150, 255) : Color.white;
+                }
+            }
             else if (modal == GameModal.UpgradeConfirm)
             {
                 title.text = "강화 확인"; int i = game.UpgradeIndex;
-                int cost = session.UpgradeCost(i); RefreshRequirements(i);
+                int cost = session.UpgradeCost(i, game.UpgradeTarget); RefreshRequirements(i);
                 confirmButton.gameObject.SetActive(cost >= 0);
-                confirmButton.color = session.CanUpgrade(i) ? gold : muted; confirmLabel.text = "강화";
-                confirmLabel.color = session.CanUpgrade(i) ? dark : new Color32(173, 185, 191, 255);
+                confirmButton.color = session.CanUpgrade(i, game.UpgradeTarget) ? gold : muted; confirmLabel.text = "강화";
+                confirmLabel.color = session.CanUpgrade(i, game.UpgradeTarget) ? dark : new Color32(173, 185, 191, 255);
             }
             else
             {
@@ -182,6 +202,11 @@ namespace DigDeep
                     if (actions[action].Contains(point)) return action;
                 if (actions["sell"].Contains(point)) return s.CanSell(game.SaleKind, game.SaleQuantity) ? "sell" : "blocked";
             }
+            else if (modal == GameModal.EquipmentChoice)
+            {
+                for (int i = 0; i < GameSettings.EquipmentChoices.Length; i++)
+                    if (actions["equipment-" + i].Contains(point)) return s.HasEquipment(GameSettings.EquipmentChoices[i]) ? "blocked" : "equipment-" + i;
+            }
             else if (modal == GameModal.Upgrade)
             {
                 if (actions["refinery-upgrade"].Contains(point)) return "refinery-upgrade";
@@ -204,7 +229,7 @@ namespace DigDeep
             {
                 if (modal == GameModal.ResetWarning) return "reset-next";
                 if (modal == GameModal.ResetConfirm) return "reset-confirm";
-                if (modal == GameModal.UpgradeConfirm && s.CanUpgrade(game.UpgradeIndex)) return "upgrade-confirm";
+                if (modal == GameModal.UpgradeConfirm && s.CanUpgrade(game.UpgradeIndex, game.UpgradeTarget)) return "upgrade-confirm";
             }
             return "blocked";
         }
@@ -260,6 +285,21 @@ namespace DigDeep
         void RefreshConversion()
         {
             UpdateList(conversionList, true);
+            if (shownConversion != game.ConversionKind)
+            {
+                int index = conversionList.Visible.FindIndex(row => row.Entry.Kind == game.ConversionKind);
+                if (index >= 0)
+                {
+                    float top = index * conversionList.RowHeight;
+                    float offset = conversionList.Offset;
+                    if (top < offset) offset = top;
+                    else if (top + conversionList.RowHeight > offset + conversionList.Area.height)
+                        offset = top + conversionList.RowHeight - conversionList.Area.height;
+                    conversionList.Offset = Mathf.Clamp(offset, 0, conversionList.Maximum);
+                    conversionList.Content.anchoredPosition = new Vector2(0, conversionList.Offset);
+                }
+                shownConversion = game.ConversionKind;
+            }
             conversionInfo.text = "보유 에너지\n" + GameSettings.FormatEnergy(game.Session.EnergyTenths);
             conversionAmount.text = game.ConversionQuantity.ToString("N0");
             int rate = game.settings.ConversionRate(game.ConversionKind);
@@ -272,9 +312,25 @@ namespace DigDeep
             float age = Time.unscaledTime - game.LastConversionTime;
             converterImage.rectTransform.localScale = Vector3.one * (age >= 0 && age < .35f ? 1 + .05f * Mathf.Sin(age / .35f * Mathf.PI) : 1);
         }
+        string EquipmentTrait(string id) => id == "DRILL" ? "빠른 깊이 돌파" : id == "TUNGSTEN" ? "튼튼한 기본형" : id == "CRUSHER" ? "광물 추가 드롭 +" + game.settings.ExtraDrops(id) : "지정 블록 주변 9칸 폭파";
+        void CreateEquipmentChoices()
+        {
+            equipmentSelection = Node(layer, "Equipment branch selection", new Rect(0, 0, 480, 854));
+            for (int i = 0; i < GameSettings.EquipmentChoices.Length; i++)
+            {
+                string id = GameSettings.EquipmentChoices[i];
+                var rect = new Rect(55 + i % 2 * 192, 302 + i / 2 * 170, 178, 162);
+                var card = equipmentCards[i] = Action(equipmentSelection, "equipment-" + i, rect, "", muted, Color.white);
+                card.GetComponentInChildren<Text>().gameObject.SetActive(false);
+                var icon = Box(card.transform, "Equipment icon", new Rect(61, 6, 56, 56), Color.white, game.PickSprite(id)); icon.preserveAspect = true;
+                equipmentLabels[i] = Label(card.transform, "Equipment stats", new Rect(3, 67, 172, 91), "", 13, Color.white);
+            }
+            Label(equipmentSelection, "Shared equipment cost", new Rect(45, 647, 390, 28), "공통 비용 " + game.settings.equipmentCost.ToString("N0") + "원 · 에너지 " + GameSettings.FormatEnergy(game.settings.equipmentEnergyTenths), 14, gold);
+        }
         void CreateRequirements()
         {
             requirementTable = Node(confirmation, "Readable requirements", new Rect(0, 0, 480, 854));
+            upgradeSpeed = Label(requirementTable, "Upgrade speed", new Rect(55, 631, 370, 28), "", 16, gold);
             upgradeSummary = Label(requirementTable, "Upgrade summary", new Rect(55, 298, 370, 52), "", 16, Color.white);
             Label(requirementTable, "Material heading", new Rect(60, 355, 140, 26), "재료", 14, new Color32(168, 185, 194, 255));
             Label(requirementTable, "Required heading", new Rect(212, 355, 103, 26), "필요", 14, new Color32(168, 185, 194, 255));
@@ -292,14 +348,17 @@ namespace DigDeep
         }
         void RefreshRequirements(int index)
         {
-            var s = game.Session; var pick = s.Picks[index]; var next = GameSettings.NextPick(pick.Name);
+            var s = game.Session; var pick = s.Picks[index]; var next = game.UpgradeTarget ?? GameSettings.NextPick(pick.Name);
             foreach (var row in requirementRows) row.Background.gameObject.SetActive(false);
             if (next == null)
             {
                 upgradeSummary.text = (index + 1) + "번 " + PickName(pick.Name) + "\n현재 마지막 강화 단계입니다.";
+                upgradeSpeed.text = "채굴 속도 " + game.settings.SpeedMultiplier(pick.Name).ToString("0.#") + "배";
                 requirementStatus.text = "완성된 곡괭이입니다."; requirementStatus.color = Color.white; return;
             }
             upgradeSummary.text = PickName(pick.Name) + " → " + PickName(next) + "\n내구도 " + pick.Maximum + " → " + game.settings.Durability(next) + "  ·  피해 " + pick.Power + " → " + game.settings.Power(next);
+            upgradeSpeed.text = "채굴 속도 " + game.settings.SpeedMultiplier(pick.Name).ToString("0.#") + "배 → " + game.settings.SpeedMultiplier(next).ToString("0.#") + "배";
+            if (next == "DYNAMITE") upgradeSpeed.text = "블록을 선택해 폭파 · 회당 내구도 1";
             int slot = 0;
             void Row(string name, int needed, int owned, Sprite icon, Color tint, bool energyValue = false, bool moneyValue = false)
             {
@@ -314,13 +373,13 @@ namespace DigDeep
                 row.Owned.fontSize = row.Owned.text.Length > 9 ? 12 : 18;
                 row.Owned.color = owned >= needed ? new Color32(163, 235, 187, 255) : new Color32(255, 156, 143, 255);
             }
-            Row("돈", s.UpgradeCost(index), s.Money, game.moneyIcon, game.moneyIcon != null ? Color.white : gold, moneyValue: true);
-            Row("석탄", s.UpgradeCoal(index), s.Coal, game.coalOre, Color.white);
-            Row("철광석", s.UpgradeOre(index), s.Iron, game.ironOre, Color.white);
-            Row("금광석", s.UpgradeGold(index), s.Gold, game.goldOre, Color.white);
-            Row("다이아몬드", s.UpgradeDiamond(index), s.Diamond, game.diamondOre, Color.white);
-            Row("에너지", s.UpgradeEnergy(index), s.EnergyTenths, game.energyIcon, game.energyIcon != null ? Color.white : new Color32(63, 216, 231, 255), energyValue: true);
-            bool can = s.CanUpgrade(index);
+            Row("돈", s.UpgradeCost(index, game.UpgradeTarget), s.Money, game.moneyIcon, game.moneyIcon != null ? Color.white : gold, moneyValue: true);
+            Row("석탄", s.UpgradeCoal(index, game.UpgradeTarget), s.Coal, game.coalOre, Color.white);
+            Row("철광석", s.UpgradeOre(index, game.UpgradeTarget), s.Iron, game.ironOre, Color.white);
+            Row("금광석", s.UpgradeGold(index, game.UpgradeTarget), s.Gold, game.goldOre, Color.white);
+            Row("다이아몬드", s.UpgradeDiamond(index, game.UpgradeTarget), s.Diamond, game.diamondOre, Color.white);
+            Row("에너지", s.UpgradeEnergy(index, game.UpgradeTarget), s.EnergyTenths, game.energyIcon, game.energyIcon != null ? Color.white : new Color32(63, 216, 231, 255), energyValue: true);
+            bool can = s.CanUpgrade(index, game.UpgradeTarget);
             requirementStatus.text = can ? "강화할 수 있어요." : "붉게 표시된 재료가 부족해요.";
             requirementStatus.color = can ? new Color32(163, 235, 187, 255) : new Color32(255, 156, 143, 255);
         }
@@ -338,7 +397,7 @@ namespace DigDeep
         public void EndScroll() { scrolling = null; }
         public void Wheel(Vector2 point, float distance)
         { if (Mathf.Approximately(distance, 0)) return; var list = ListAt(point); if (list == null) return; UpdateList(list, list == saleList); list.Offset = Mathf.Clamp(list.Offset - distance, 0, list.Maximum); list.Content.anchoredPosition = new Vector2(0, list.Offset); }
-        public static string PickName(string id) => id == "DIAMOND" ? "다이아 곡괭이" : id == "ALLOY" ? "합금 곡괭이" : id == "IRON" ? "철 곡괭이" : id == "STONE" ? "돌 곡괭이" : "나무 곡괭이";
+        public static string PickName(string id) => id == "DRILL" ? "드릴" : id == "TUNGSTEN" ? "텅스텐 곡괭이" : id == "CRUSHER" ? "분쇄기" : id == "DYNAMITE" ? "다이너마이트" : id == "SUPERALLOY" ? "초합금 곡괭이" : id == "DIAMOND" ? "다이아 곡괭이" : id == "ALLOY" ? "합금 곡괭이" : id == "IRON" ? "철 곡괭이" : id == "STONE" ? "돌 곡괭이" : "나무 곡괭이";
         Image Action(Transform parent, string id, Rect rect, string caption, Color color, Color textColor, int size = 17)
         { actions[id] = rect; var image = Box(parent, id, rect, color); Label(image.transform, "Label", new Rect(0, 0, rect.width, rect.height), caption, size, textColor); return image; }
         static RectTransform Node(Transform parent, string name, Rect rect)

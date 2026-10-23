@@ -55,7 +55,7 @@ namespace DigDeep.Editor
             var upgrade = ProgressData.Initial(s, 500); upgrade.picks[0].id = "IRON"; upgrade.coal = 30; upgrade.iron = 10; upgrade.gold = 5;
             run = new MiningSession(s, upgrade);
             Check(run.UpgradePick(0) && run.Picks[0].Name == "ALLOY" && run.Money == 0 && run.Coal == 0 && run.Iron == 0 && run.Gold == 0, "alloy recipe consumes exactly specified resources");
-            Check(run.Picks[0].Power == 2.5f && run.Picks[0].Maximum == 80 && !run.UpgradePick(0) && run.UpgradeCost(0) == 500, "alloy now requires diamond and energy for its next upgrade");
+            Check(run.Picks[0].Power == 2.5f && run.Picks[0].Maximum == 80 && !run.UpgradePick(0) && run.UpgradeCost(0) == 1000, "alloy now requires diamond and energy for its next upgrade");
             Check(ProgressData.TryParse(JsonUtility.ToJson(run.Growth()), out restored) && restored.version == 7 && restored.picks[0].power == 2.5f && new MiningSession(s, restored).Picks[0].Name == "ALLOY", "alloy save round trip");
             var legacy = ProgressData.Initial(s, 123); legacy.version = 4; legacy.picks[0].id = "IRON"; legacy.coal = 6; legacy.iron = 7; legacy.tutorial.controlsStep = 3; legacy.tutorial.menuStep = 1;
             Check(ProgressData.TryParse(JsonUtility.ToJson(legacy), out restored) && restored.version == 7 && restored.money == 123 && restored.coal == 6 && restored.iron == 7 && restored.gold == 0 && restored.tutorial.controlsStep == 3 && restored.tutorial.menuStep == 1, "version four preserves growth and tutorial checkpoints");

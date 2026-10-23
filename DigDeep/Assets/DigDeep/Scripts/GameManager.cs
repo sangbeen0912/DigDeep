@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace DigDeep
 {
-    public enum GameModal { None, Shop, Inventory, Upgrade, UpgradeConfirm, ResetWarning, ResetConfirm }
+    public enum GameModal { None, Shop, Inventory, Upgrade, UpgradeConfirm, ResetWarning, ResetConfirm, EquipmentChoice }
     public enum ShopPage { Buy, Sell }
     public enum RefineryPage { Upgrade, Conversion }
     public sealed class GameManager : MonoBehaviour
@@ -11,14 +11,17 @@ namespace DigDeep
         public Sprite stone, grass, wood, stonePick, iron, alloy, coalOre, ironOre, goldOre;
         public Sprite shopSkin, inventorySkin, upgradeSkin, digSkin;
         public Sprite diamondPick, diamondOre, energyConverter;
-        public Sprite moneyIcon, energyIcon;
+        public Sprite moneyIcon, energyIcon, superalloyPick, drill, tungsten, crusher, dynamite;
         public Font font;
         public MiningSession Session { get; private set; }
         public GameView View { get; private set; }
         public PointerController Controls { get; private set; }
         public TutorialFlow Tutorial { get; private set; }
         public GameModal Modal { get; private set; }
+        public int MenuRevision { get; private set; }
+        void OnSessionChanged() => MenuRevision++;
         public int UpgradeIndex { get; private set; }
+        public string UpgradeTarget { get; private set; }
         public ShopPage ShopTab { get; private set; } = ShopPage.Buy;
         public Mineral SaleKind { get; private set; } = Mineral.Stone;
         public int SaleQuantity { get; private set; }
@@ -31,9 +34,10 @@ namespace DigDeep
         public bool IsSwinging { get; private set; }
         public Vector2Int SwingOrigin { get; private set; }
         public Vector2Int SwingCell { get; private set; }
-        public float SwingProgress => IsSwinging ? Mathf.Clamp01((Time.unscaledTime - swingStarted) / settings.strikeInterval) : 0;
+        public float CurrentStrikeInterval => settings.StrikeInterval(Session.Picks[Session.Selected].Name);
+        public float SwingProgress => IsSwinging ? Mathf.Clamp01((Time.unscaledTime - swingStarted) / swingDuration) : 0;
         bool continuous, dropMining, impactDone;
-        float swingStarted;
+        float swingStarted, swingDuration = .34f;
 
         void Awake()
         {
@@ -41,7 +45,7 @@ namespace DigDeep
             Session = new MiningSession(settings, store.Load(settings));
             Tutorial = new TutorialFlow(this);
             Session.GrowthChanged += SaveGrowth;
-            Session.Impact += Tutorial.OnImpact; Session.Changed += Tutorial.StateChanged;
+            Session.Impact += Tutorial.OnImpact; Session.Changed += Tutorial.StateChanged; Session.Changed += OnSessionChanged;
             View = gameObject.AddComponent<GameView>();
             View.Initialize(this);
             Controls = gameObject.AddComponent<PointerController>();
@@ -55,7 +59,7 @@ namespace DigDeep
             if (!impactDone && progress >= 0.52f)
             {
                 impactDone = true;
-                Session.Strike();
+                if (Session.IsDynamite) Session.Blast(SwingCell); else Session.Strike();
                 if (!Session.CanMine) { continuous = false; dropMining = false; }
                 if (dropMining && !Session.Target.HasValue) { dropMining = false; continuous = false; }
             }
@@ -66,18 +70,27 @@ namespace DigDeep
             }
         }
 
-        public void Tap() { if (Modal == GameModal.None && Tutorial.AllowsTap && Session.CanMine && !IsSwinging) { Tutorial.BeginTap(); BeginSwing(); } }
-        public void Hold() { if (Modal != GameModal.None || !Tutorial.AllowsHold || !Session.CanMine) return; Tutorial.BeginHold(); continuous = true; if (!IsSwinging) BeginSwing(); }
+        public void Tap() { if (Session.IsDynamite) return; if (Modal == GameModal.None && Tutorial.AllowsTap && Session.CanMine && !IsSwinging) { Tutorial.BeginTap(); BeginSwing(); } }
+        public void Hold() { if (Session.IsDynamite) return; if (Modal != GameModal.None || !Tutorial.AllowsHold || !Session.CanMine) return; Tutorial.BeginHold(); continuous = true; if (!IsSwinging) BeginSwing(); }
+        public void AimBlast(Vector2Int cell)
+        {
+            if (Modal != GameModal.None || !Session.IsDynamite || !Tutorial.AllowsTap || IsSwinging) return;
+            if (!View.VisibleCell(cell) || !Session.CanBlast(cell)) { View.ShowNotice("화면에 보이는 블록을 선택하세요."); return; }
+            SwingOrigin = Session.Position; SwingCell = cell; swingDuration = CurrentStrikeInterval;
+            continuous = dropMining = false; IsSwinging = true; impactDone = false; swingStarted = Time.unscaledTime;
+        }
         void BeginSwing()
         {
             SwingOrigin = Session.Position;
             SwingCell = Session.Target ?? (Session.Position + Vector2Int.up);
+            swingDuration = CurrentStrikeInterval;
             IsSwinging = true; impactDone = false; swingStarted = Time.unscaledTime;
         }
         public void StopMining() { continuous = false; dropMining = false; IsSwinging = false; Tutorial?.CancelGesture(); }
         public void ReleaseHold() { bool complete = Tutorial.CanFinishHold; StopMining(); if (complete) Tutorial.FinishHold(); }
         public void Drop(Vector2Int cell)
         {
+            if (Session.IsDynamite) { AimBlast(cell); return; }
             StopMining();
             if (Modal != GameModal.None || !Tutorial.AllowsDrag) return;
             if (!Session.Drop(cell))
@@ -100,10 +113,11 @@ namespace DigDeep
         }
         public void HandleAction(string action)
         {
+            MenuRevision++;
             if (string.IsNullOrEmpty(action)) return;
             if (View.TryOptionalAction(action)) return;
             if (!Tutorial.AllowsAction(action)) return;
-            if (action == "close") { var previous = Modal; CancelInput(); Modal = Modal == GameModal.UpgradeConfirm ? GameModal.Upgrade : GameModal.None; Tutorial.ActionCompleted(action, previous); return; }
+            if (action == "close") { var previous = Modal; CancelInput(); Modal = Modal == GameModal.UpgradeConfirm ? (UpgradeTarget == null ? GameModal.Upgrade : GameModal.EquipmentChoice) : Modal == GameModal.EquipmentChoice ? GameModal.Upgrade : GameModal.None; if (Modal != GameModal.UpgradeConfirm) UpgradeTarget = null; Tutorial.ActionCompleted(action, previous); return; }
             if (action == "reset-next" && Modal == GameModal.ResetWarning && Session.State != SessionState.Playing)
             { CancelInput(); Modal = GameModal.ResetConfirm; return; }
             if (action == "reset-confirm" && Modal == GameModal.ResetConfirm && Session.State != SessionState.Playing)
@@ -111,10 +125,10 @@ namespace DigDeep
                 CancelInput();
                 var initial = ProgressData.Initial(settings);
                 if (!store.Reset(initial)) return;
-                Session.GrowthChanged -= SaveGrowth; Session.Impact -= View.OnImpact; Session.RecordBroken -= View.OnRecordBroken; Session.Impact -= Tutorial.OnImpact; Session.Changed -= Tutorial.StateChanged;
+                Session.GrowthChanged -= SaveGrowth; Session.Impact -= View.OnImpact; Session.RecordBroken -= View.OnRecordBroken; Session.Exploded -= View.OnExplosion; Session.Impact -= Tutorial.OnImpact; Session.Changed -= Tutorial.StateChanged; Session.Changed -= OnSessionChanged;
                 Session = new MiningSession(settings, initial);
-                Session.GrowthChanged += SaveGrowth; Session.Impact += View.OnImpact; Session.RecordBroken += View.OnRecordBroken;
-                Session.Impact += Tutorial.OnImpact; Session.Changed += Tutorial.StateChanged;
+                Session.GrowthChanged += SaveGrowth; Session.Impact += View.OnImpact; Session.RecordBroken += View.OnRecordBroken; Session.Exploded += View.OnExplosion;
+                Session.Impact += Tutorial.OnImpact; Session.Changed += Tutorial.StateChanged; Session.Changed += OnSessionChanged;
                 Modal = GameModal.None; View.ResetRunVisuals(); return;
             }
             if (Modal == GameModal.Shop)
@@ -156,10 +170,16 @@ namespace DigDeep
                     ConversionQuantity = Mathf.Min(ConversionQuantity, Session.MaximumConvertible(ConversionKind)); return;
                 }
             }
+            if (Modal == GameModal.EquipmentChoice && action.StartsWith("equipment-") && int.TryParse(action.Substring(10), out int branch))
+            {
+                if (branch >= 0 && branch < GameSettings.EquipmentChoices.Length && !Session.HasEquipment(GameSettings.EquipmentChoices[branch]))
+                { UpgradeTarget = GameSettings.EquipmentChoices[branch]; Open(GameModal.UpgradeConfirm); }
+                return;
+            }
             if (Modal == GameModal.Upgrade && action.StartsWith("upgrade-pick") && int.TryParse(action.Substring(12), out int upgradeIndex))
-            { if (upgradeIndex >= 0 && upgradeIndex < Session.Picks.Length) { UpgradeIndex = upgradeIndex; Open(GameModal.UpgradeConfirm); } return; }
+            { if (upgradeIndex >= 0 && upgradeIndex < Session.Picks.Length) { UpgradeIndex = upgradeIndex; UpgradeTarget = null; Open(Session.Picks[upgradeIndex].Name == "SUPERALLOY" ? GameModal.EquipmentChoice : GameModal.UpgradeConfirm); } return; }
             if (Modal == GameModal.UpgradeConfirm && action == "upgrade-confirm")
-            { if (Session.UpgradePick(UpgradeIndex)) { Modal = GameModal.Upgrade; Tutorial.ActionCompleted(action, GameModal.UpgradeConfirm); } return; }
+            { if (Session.UpgradePick(UpgradeIndex, UpgradeTarget)) { Modal = GameModal.Upgrade; UpgradeTarget = null; Tutorial.ActionCompleted(action, GameModal.UpgradeConfirm); } return; }
             if (Modal != GameModal.None) return;
             if (action == "play") Play();
             else if (action == "restart") Restart();
@@ -197,7 +217,7 @@ namespace DigDeep
             }
             SaleQuantity = Session.Stock(SaleKind) > 0 ? 1 : 0;
         }
-        public Sprite PickSprite(string id) => id == "DIAMOND" ? diamondPick : id == "ALLOY" ? alloy : id == "IRON" ? iron : id == "STONE" ? stonePick : wood;
+        public Sprite PickSprite(string id) => id == "DRILL" ? drill : id == "TUNGSTEN" ? tungsten : id == "CRUSHER" ? crusher : id == "DYNAMITE" ? dynamite : id == "SUPERALLOY" ? superalloyPick : id == "DIAMOND" ? diamondPick : id == "ALLOY" ? alloy : id == "IRON" ? iron : id == "STONE" ? stonePick : wood;
         public Sprite BlockSprite(Mineral kind, int row) => kind == Mineral.Oil ? null : kind == Mineral.Diamond ? diamondOre : kind == Mineral.Coal ? coalOre : kind == Mineral.Iron ? ironOre : kind == Mineral.Gold ? goldOre : row == 0 ? grass : stone;
         public void SaveGrowth() { if (Session != null) store.Save(Session.Growth()); }
         void OnApplicationPause(bool paused) { if (paused) { CancelInput(); SaveGrowth(); } }

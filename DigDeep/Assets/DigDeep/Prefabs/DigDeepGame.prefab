@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 5625426700930978155}
   - component: {fileID: 1346113388244730895}
   m_Layer: 0
-  m_Name: PresentationTools
+  m_Name: TestingTools
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -44,10 +44,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 526a7d807a50b2048a1fbc20c2e11db4, type: 3}
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::DigDeep.Presentation.PresentationResourcesButton
-  money: 20000
-  coal: 200
-  iron: 100
-  gold: 30
+  money: 100000
+  coal: 500
+  iron: 500
+  gold: 100
+  diamond: 200
+  oil: 50
+  energyTenths: 5000
 --- !u!1 &7586289421317910758
 GameObject:
   m_ObjectHideFlags: 0
@@ -112,4 +115,9 @@ MonoBehaviour:
   energyConverter: {fileID: -140845772, guid: e64ee7f6883cfe440a8652a943a93ea1, type: 3}
   moneyIcon: {fileID: 231546154, guid: 08ce5f25864b17b408cb20a47b949acd, type: 3}
   energyIcon: {fileID: -1553370976, guid: ad6a7eff29280b146b5a0dd12cfa16d9, type: 3}
+  superalloyPick: {fileID: 1735497417, guid: 8a60ca51182e1084682c535ef2f4b83e, type: 3}
+  drill: {fileID: 2029726254, guid: bc608f5bbc53b4145b7dc664dd9bbedb, type: 3}
+  tungsten: {fileID: 1009274302, guid: bb89e9f5126d6a44dbfb6fb57449a50a, type: 3}
+  crusher: {fileID: 1846557916, guid: 781aa91b10db2904bbb6375d450cbd00, type: 3}
+  dynamite: {fileID: -1467981909, guid: ab98177c7145da14aa1cb0d4b3bb2407, type: 3}
   font: {fileID: 12800000, guid: 995492bfe62ca8149a3bc1e6ea771ebe, type: 3}

@@ -14,12 +14,17 @@ namespace DigDeep
         Image pickImage, markerImage, readyButton, regroupButton, shopButton, inventoryButton, upgradeButton, resetButton;
         GameMenus menus;
         TutorialView tutorialView;
-        Text notice;
+        Text notice, boomText;
+        BlastBurstGraphic boom;
+        float boomTime = -10;
+        int shownMoney = -1, shownDepth = -1, shownBest = -1;
+        readonly int[] shownRemaining = { -1, -1, -1, -1 };
+        readonly int[] shownMaximum = { -1, -1, -1, -1 };
         Image noticePanel, impactFlash;
         float noticeUntil;
         Color noticeColor;
         sealed class Reward { public Text Text; public Vector2 Start; public float Born = -10; }
-        readonly Reward[] rewards = new Reward[6];
+        readonly Reward[] rewards = new Reward[10];
         int nextReward;
         Text readyHint;
         Text money, status, depth, title, detail, mainLabel;
@@ -84,7 +89,7 @@ namespace DigDeep
             markerImage = Box(world, "Drop target", new Rect(0, 0, Pitch, Pitch), new Color(0.4f, 1f, .7f, .3f));
             marker = markerImage.rectTransform; marker.gameObject.SetActive(false);
             pickImage = Box(world, "Active pickaxe", new Rect(0, 0, 76, 76), Color.white, game.wood);
-            pickRect = pickImage.rectTransform;
+            pickRect = pickImage.rectTransform; pickImage.preserveAspect = true;
             pickRect.pivot = new Vector2(.5f, .5f);
             for (int i = 0; i < 12; i++)
             {
@@ -98,6 +103,11 @@ namespace DigDeep
                 var outline = text.gameObject.AddComponent<Outline>(); outline.effectColor = new Color32(236, 241, 233, 245); outline.effectDistance = new Vector2(1, -1);
                 text.gameObject.SetActive(false); rewards[i] = new Reward { Text = text };
             }
+            var boomRect = RectNode(world, "Reusable explosion", new Rect(0, 0, 202, 160)); boomRect.pivot = new Vector2(.5f, .5f);
+            boom = boomRect.gameObject.AddComponent<BlastBurstGraphic>(); boom.raycastTarget = false;
+            boomText = Label(boomRect, "BOOM text", new Rect(1, 28, 200, 90), "BOOM!", 48, new Color32(255, 223, 25, 255), TextAnchor.MiddleCenter);
+            boomText.fontStyle = FontStyle.Bold; var boomOutline = boomText.gameObject.AddComponent<Outline>(); boomOutline.effectColor = Color.black; boomOutline.effectDistance = new Vector2(3, -3);
+            boom.gameObject.SetActive(false);
             Box(root, "HUD", new Rect(0, 0, Width, FieldTop), dark);
             Box(root, "HUD underline", new Rect(20, 178, 440, 2), new Color32(49, 65, 72, 255));
             for (int i = 0; i < 4; i++)
@@ -139,7 +149,7 @@ namespace DigDeep
             notice = Label(noticePanel.transform, "Mining notice", new Rect(6, 0, 398, 45), "", 16, Color.white, TextAnchor.MiddleCenter);
             noticePanel.gameObject.SetActive(false);
             tutorialView = gameObject.AddComponent<TutorialView>(); tutorialView.Initialize(game, root);
-            game.Session.Impact += OnImpact; game.Session.RecordBroken += OnRecordBroken;
+            game.Session.Impact += OnImpact; game.Session.RecordBroken += OnRecordBroken; game.Session.Exploded += OnExplosion;
             Layout();
         }
 
@@ -184,17 +194,33 @@ namespace DigDeep
             }
             var position = Center(session.Position);
             if (game.IsSwinging) position = Center(game.SwingOrigin);
-            if (dragging) position = new Vector2(dragPoint.x, dragPoint.y + scroll);
+            if (dragging && !session.IsDynamite) position = new Vector2(dragPoint.x, dragPoint.y + scroll);
             pickRect.anchoredPosition = new Vector2(position.x, -position.y);
             pickImage.sprite = game.PickSprite(session.Picks[session.Selected].Name);
             pickImage.color = session.CanMine || session.State == SessionState.Ready ? Color.white : new Color(.42f, .42f, .42f);
-            float angle = IdlePickAngle;
+            string selectedId = session.Picks[session.Selected].Name;
+            bool straight = selectedId == "DRILL" || selectedId == "CRUSHER" || selectedId == "DYNAMITE";
+            float angle = straight ? 0 : IdlePickAngle;
             if (game.IsSwinging)
             {
                 Vector2 direction = Center(game.SwingCell) - Center(game.SwingOrigin);
                 Vector2 motion = new Vector2(direction.x, -direction.y).normalized;
-                angle = Mathf.Atan2(motion.y, motion.x) * Mathf.Rad2Deg - 90 + Mathf.Cos(game.SwingProgress * Mathf.PI * 2) * 42;
-                pickRect.anchoredPosition += motion * (Mathf.Sin(game.SwingProgress * Mathf.PI) * 17);
+                if (selectedId == "DRILL")
+                {
+                    // The bit points down in the source sprite. Translate on the drill axis, never swing it.
+                    angle = Mathf.Atan2(motion.y, motion.x) * Mathf.Rad2Deg + 90;
+                    pickRect.anchoredPosition += motion * (Mathf.Sin(game.SwingProgress * Mathf.PI) * 15);
+                }
+                else if (selectedId == "CRUSHER")
+                {
+                    angle = Mathf.Atan2(motion.y, motion.x) * Mathf.Rad2Deg + 90;
+                    pickRect.anchoredPosition += motion * (Mathf.Sin(game.SwingProgress * Mathf.PI) * 20);
+                }
+                else if (selectedId != "DYNAMITE")
+                {
+                    angle = Mathf.Atan2(motion.y, motion.x) * Mathf.Rad2Deg - 90 + Mathf.Cos(game.SwingProgress * Mathf.PI * 2) * 42;
+                    pickRect.anchoredPosition += motion * (Mathf.Sin(game.SwingProgress * Mathf.PI) * 17);
+                }
             }
             pickRect.localEulerAngles = new Vector3(0, 0, angle);
             for (int i = 0; i < 4; i++)
@@ -203,13 +229,15 @@ namespace DigDeep
                 if (i >= session.Picks.Length) continue;
                 var pick = session.Picks[i];
                 icons[i].sprite = game.PickSprite(pick.Name);
+                icons[i].rectTransform.localEulerAngles = new Vector3(0, 0, pick.Name == "DRILL" || pick.Name == "CRUSHER" || pick.Name == "DYNAMITE" ? 0 : IdlePickAngle);
                 cards[i].color = i == session.Selected ? gold : new Color32(59, 73, 81, 255);
                 bars[i].rectTransform.sizeDelta = new Vector2(39f * pick.Remaining / pick.Maximum, 5);
-                durability[i].text = pick.Remaining == 0 ? "소진" : pick.Remaining + " / " + pick.Maximum;
+                if (shownRemaining[i] != pick.Remaining || shownMaximum[i] != pick.Maximum)
+                { durability[i].text = pick.Remaining == 0 ? "소진" : pick.Remaining + " / " + pick.Maximum; shownRemaining[i] = pick.Remaining; shownMaximum[i] = pick.Maximum; }
                 durability[i].color = pick.Remaining == 0 ? new Color32(224, 124, 109, 255) : Color.white;
             }
-            money.text = session.Money.ToString("N0") + "원";
-            depth.text = "이번 판 " + session.Deepest + "행\n최고 기록 " + session.BestDepth + "행";
+            if (shownMoney != session.Money) { shownMoney = session.Money; money.text = shownMoney.ToString("N0") + "원"; }
+            if (shownDepth != session.Deepest || shownBest != session.BestDepth) { shownDepth = session.Deepest; shownBest = session.BestDepth; depth.text = "이번 판 " + shownDepth + "행\n최고 기록 " + shownBest + "행"; }
             bool playing = session.State == SessionState.Playing;
             bool ready = session.State == SessionState.Ready;
             overlay.gameObject.SetActive(session.State == SessionState.GameOver);
@@ -221,7 +249,7 @@ namespace DigDeep
             if (session.State == SessionState.GameOver) detail.text = session.ResultSummary();
             mainLabel.text = "다시 준비"; mainLabel.fontSize = 20;
             status.text = playing
-                ? (!session.CanMine ? "소진 · 왼쪽 위에서 곡괭이를 선택하세요" : dragging ? "시작 위치 기준 상하 2칸 · 좌우 이동" : "탭 · 길게 누르기 · 곡괭이 드래그")
+                ? (!session.CanMine ? "소진 · 왼쪽 위에서 곡괭이를 선택하세요" : dragging ? "시작 위치 기준 상하 2칸 · 좌우 이동" : session.IsDynamite ? "블록을 탭해 폭파 · 주변 9칸 · 회당 내구도 1" : "탭 · 길게 누르기 · 곡괭이 드래그")
                 : "성장 정보 자동 저장 · 가로 5칸";
             if (!string.IsNullOrEmpty(game.SaveWarning)) status.text = game.SaveWarning;
             foreach (var optional in optionalButtons.Values)
@@ -248,14 +276,19 @@ namespace DigDeep
             impactFlash.rectTransform.anchoredPosition = new Vector2(Left + cell.x * Pitch + 1, -(Surface + cell.y * Pitch + 1));
             impactFlash.color = new Color(1, 1, 1, broken ? .35f : .2f); impactFlash.gameObject.SetActive(true);
             var ore = OreCatalog.Find(game.Session.Kind(cell));
-            if (broken && ore != null)
+            if (broken && ore != null && game.Session.LastRewardAmount > 0)
             {
                 var reward = rewards[nextReward]; nextReward = (nextReward + 1) % rewards.Length;
                 reward.Start = Center(cell) - new Vector2(75, 30); reward.Born = impactTime;
-                reward.Text.text = ore.Name + " +1"; reward.Text.color = tint; reward.Text.gameObject.SetActive(true);
+                reward.Text.text = ore.Name + " +" + game.Session.LastRewardAmount; reward.Text.color = tint; reward.Text.gameObject.SetActive(true);
             }
         }
 
+        public void OnExplosion(Vector2Int cell)
+        {
+            boomTime = Time.unscaledTime; var center = Center(cell);
+            boom.rectTransform.anchoredPosition = new Vector2(center.x, -center.y); boom.gameObject.SetActive(true);
+        }
         void UpdateParticles()
         {
             foreach (var chip in chips)
@@ -276,13 +309,23 @@ namespace DigDeep
         }
         public void ResetRunVisuals()
         {
-            scroll = 0; impactTime = -10; noticeUntil = 0;
+            scroll = 0; impactTime = -10; noticeUntil = 0; boomTime = -10; boom.gameObject.SetActive(false);
             foreach (var chip in chips) chip.Image.gameObject.SetActive(false);
             foreach (var reward in rewards) reward.Text.gameObject.SetActive(false);
             impactFlash.gameObject.SetActive(false);
         }
         void UpdateFeedback()
         {
+            float boomAge = Time.unscaledTime - boomTime;
+            bool showingBoom = boomAge >= 0 && boomAge < .45f; boom.gameObject.SetActive(showingBoom);
+            if (showingBoom)
+            {
+                float alpha = Mathf.Clamp01((.45f - boomAge) / .18f);
+                boom.color = new Color(1, .12f, .08f, alpha);
+                boomText.color = new Color(1, .88f, .08f, alpha);
+                boom.rectTransform.localScale = Vector3.one * (.7f + .4f * Mathf.Sin(Mathf.Min(1, boomAge / .3f) * Mathf.PI * .5f));
+            }
+            noticePanel.rectTransform.anchoredPosition = new Vector2(35, game.Modal == GameModal.None ? -190 : -748);
             noticePanel.gameObject.SetActive(Time.unscaledTime < noticeUntil);
             var noticeTint = noticeColor; noticeTint.a = Mathf.Clamp01((noticeUntil - Time.unscaledTime) * 4); notice.color = noticeTint;
             float flashAge = Time.unscaledTime - impactTime;
@@ -305,6 +348,7 @@ namespace DigDeep
         }
         public Vector2 ScreenPoint(Vector2 point)
         { return RectTransformUtility.WorldToScreenPoint(null, root.TransformPoint(new Vector3(point.x - Width / 2, Height / 2 - point.y))); }
+        public bool VisibleCell(Vector2Int cell) => cell.x >= 0 && cell.x < GameSettings.Columns && cell.y >= 0 && CellBounds(cell).Overlaps(new Rect(Left, FieldTop, Pitch * 5, Height - FieldTop - 42));
         public bool InField(Vector2 point) => new Rect(Left, FieldTop, Pitch * 5, Height - FieldTop - 42).Contains(point);
         public Vector2Int CellAt(Vector2 point) => new Vector2Int(Mathf.FloorToInt((point.x - Left) / Pitch), Mathf.FloorToInt((point.y + scroll - Surface) / Pitch));
         public bool PickContains(Vector2 point)
@@ -368,12 +412,15 @@ namespace DigDeep
         {
             dragging = true; dragPoint = point;
             var cell = CellAt(point);
-            bool valid = InField(point) && game.Session.FindPath(cell, out _);
+            List<Vector2Int> path = null;
+            bool bombing = game.Session.IsDynamite;
+            bool valid = InField(point) && (bombing ? game.Session.CanBlast(cell) : game.Session.FindPath(cell, out path));
             marker.gameObject.SetActive(InField(point));
-            marker.anchoredPosition = new Vector2(Left + cell.x * Pitch, -(Surface + cell.y * Pitch));
+            marker.sizeDelta = Vector2.one * Pitch * (bombing ? 3 : 1);
+            marker.anchoredPosition = new Vector2(Left + (cell.x - (bombing ? 1 : 0)) * Pitch, -(Surface + (cell.y - (bombing ? 1 : 0)) * Pitch));
             markerImage.color = valid ? new Color(.35f, .9f, .63f, .35f) : new Color(.95f, .3f, .25f, .4f);
             foreach (var image in routeMarkers) image.gameObject.SetActive(false);
-            if (valid && game.Session.FindPath(cell, out var path))
+            if (valid && path != null)
                 for (int i = 0; i < path.Count && i < routeMarkers.Count; i++)
                 {
                     var image = routeMarkers[i]; image.gameObject.SetActive(true);
